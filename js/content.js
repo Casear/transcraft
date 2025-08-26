@@ -8,6 +8,27 @@ let isLanguageMenuOpen = false;
 let debugMode = false;
 let autoTranslateEnabled = false;
 let currentDomain = window.location.hostname;
+let i18nReady = false;
+
+// Initialize i18n
+async function initContentI18n() {
+  try {
+    await window.i18n.initI18n();
+    i18nReady = true;
+    debugLog('i18n initialized successfully');
+  } catch (error) {
+    console.warn('Failed to initialize i18n, using fallback text:', error);
+    i18nReady = false;
+  }
+}
+
+// Get localized message with fallback
+function getLocalizedMessage(key, fallback = '') {
+  if (i18nReady && window.i18n) {
+    return window.i18n.getMessage(key);
+  }
+  return fallback;
+}
 
 // Debug logging utility
 function debugLog(...args) {
@@ -28,18 +49,27 @@ function debugError(...args) {
   }
 }
 
-// Initialize settings from storage
-chrome.storage.sync.get(['debugMode', 'autoTranslateDomains'], (result) => {
-  debugMode = result.debugMode || false;
-  if (debugMode) {
-    console.log('[TransCraft Debug] Debug mode is ENABLED');
-  }
+// Initialize i18n and settings from storage
+(async () => {
+  await initContentI18n();
   
-  // Check if auto-translate is enabled for current domain
-  const autoTranslateDomains = result.autoTranslateDomains || {};
-  autoTranslateEnabled = autoTranslateDomains[currentDomain] || false;
-  debugLog('Auto-translate for', currentDomain, ':', autoTranslateEnabled);
-});
+  chrome.storage.sync.get(['debugMode', 'autoTranslateDomains'], (result) => {
+    debugMode = result.debugMode || false;
+    if (debugMode) {
+      console.log('[TransCraft Debug] Debug mode is ENABLED');
+    }
+    
+    // Check if auto-translate is enabled for current domain
+    const autoTranslateDomains = result.autoTranslateDomains || {};
+    autoTranslateEnabled = autoTranslateDomains[currentDomain] || false;
+    debugLog('Auto-translate for', currentDomain, ':', autoTranslateEnabled);
+    
+    // Update UI when settings are loaded
+    setTimeout(() => {
+      updateAutoTranslateButton();
+    }, 100);
+  });
+})();
 
 // Listen for debug mode changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -158,7 +188,13 @@ function getTranslatableElements() {
           // 檢查是否為腳本或樣式標籤內容
           const parentScript = elem.closest('script, style, noscript');
           if (!parentScript) {
-            elements.push(elem);
+            // 排除翻譯擴展的UI元素
+            const isTranslationUI = elem.closest('#ai-translation-floating-container') ||
+                                   elem.closest('#ai-translation-language-menu') ||
+                                   elem.closest('#ai-translation-error-modal');
+            if (!isTranslationUI) {
+              elements.push(elem);
+            }
           }
         }
       }
@@ -200,6 +236,12 @@ function getTranslatableElements() {
       // 檢查是否在腳本或樣式標籤內
       const parentScript = elem.closest('script, style, noscript');
       if (parentScript) continue;
+      
+      // 排除翻譯擴展的UI元素
+      const isTranslationUI = elem.closest('#ai-translation-floating-container') ||
+                             elem.closest('#ai-translation-language-menu') ||
+                             elem.closest('#ai-translation-error-modal');
+      if (isTranslationUI) continue;
       
       // 檢查是否包含其他區塊級子元素
       const hasBlockChildren = elem.querySelector('p, h1, h2, h3, h4, h5, h6, div[class], section, article, ul, ol, table');
@@ -420,6 +462,12 @@ async function translateText(text, apiConfig, timeoutMs = 60000) {
 
 async function translatePage() {
   if (isTranslating) return;
+  
+  // 確保語言菜單已關閉
+  if (isLanguageMenuOpen) {
+    debugLog('Closing language menu before translation');
+    closeLanguageMenu();
+  }
   
   if (isTranslated) {
     restoreOriginalText();
@@ -776,8 +824,9 @@ async function translatePage() {
   } else if (successCount < elements.length) {
     // 如果沒有收集到具體錯誤但有失敗，顯示一般提示
     const failedCount = elements.length - successCount;
-    showErrorModal('部分內容未翻譯', 
-      `成功翻譯 ${successCount} 個元素，${failedCount} 個元素翻譯失敗。<br>可能是因為網路問題或 API 限制。`, 
+    showErrorModal(
+      getLocalizedMessage('translation_failed', '部分內容未翻譯'), 
+      getLocalizedMessage('translation_partial_error', `成功翻譯 ${successCount} 個元素，${failedCount} 個元素翻譯失敗。<br>可能是因為網路問題或 API 限制。`).replace('$1', successCount).replace('$2', failedCount), 
       4000);
   }
 }
@@ -1096,7 +1145,7 @@ function createFloatingButton() {
       <!-- 左側翻譯區域 -->
       <div class="button-left-section" id="translate-section">
         <svg class="button-icon translate-icon" viewBox="0 0 24 24">
-          <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-.61.08-1.21.21-1.78L8.99 15v1c0 1.1.9 2 2 2v1.93C7.06 19.43 4 16.07 4 12zm13.89 5.4c-.26-.81-1-1.4-1.89-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41C17.92 5.77 20 8.65 20 12c0 2.08-.81 3.98-2.11 5.4z"/>
         </svg>
         <svg class="button-icon loading-icon" viewBox="0 0 24 24" style="display: none;">
           <circle class="progress-ring" cx="12" cy="12" r="10" fill="none" stroke-width="2"/>
@@ -1116,13 +1165,6 @@ function createFloatingButton() {
         <span class="language-text" id="current-language">中</span>
         <svg class="language-arrow" viewBox="0 0 24 24" width="10" height="10">
           <path d="M7 10l5 5 5-5z" fill="white"/>
-        </svg>
-      </div>
-      
-      <!-- 自動翻譯開關 -->
-      <div class="auto-translate-toggle" id="auto-translate-toggle" title="自動翻譯開關">
-        <svg class="auto-translate-icon" viewBox="0 0 24 24" width="12" height="12">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM8 17.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM9.5 8c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5S9.5 8.83 9.5 8zm7 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
         </svg>
       </div>
     </div>
@@ -1152,11 +1194,10 @@ function createFloatingButton() {
   // 添加事件監聽器
   const translateSection = document.getElementById('translate-section');
   const languageSection = document.getElementById('language-section');
-  const autoTranslateToggle = document.getElementById('auto-translate-toggle');
   
   translateSection.addEventListener('click', handleTranslateClick);
+  translateSection.addEventListener('contextmenu', handleTranslateSectionRightClick);
   languageSection.addEventListener('click', toggleLanguageMenu);
-  autoTranslateToggle.addEventListener('click', handleAutoTranslateToggle);
   
   // 語言選項點擊事件
   languageMenu.addEventListener('click', (e) => {
@@ -1185,6 +1226,14 @@ async function handleTranslateClick(e) {
   e.stopPropagation();
   if (isTranslating) return;
   
+  // 如果語言菜單是開啟的，先關閉它
+  if (isLanguageMenuOpen) {
+    debugLog('Language menu is open, closing before translation');
+    closeLanguageMenu();
+    // 給一個短暫的延遲讓菜單關閉動畫完成
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
   const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys']);
   if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
     // 如果未設置 API，打開設定頁面
@@ -1195,23 +1244,30 @@ async function handleTranslateClick(e) {
   translatePage();
 }
 
-// 處理自動翻譯開關點擊
-async function handleAutoTranslateToggle(e) {
+// 處理翻譯區域右鍵點擊（切換自動翻譯）
+async function handleTranslateSectionRightClick(e) {
+  e.preventDefault();
   e.stopPropagation();
   await toggleAutoTranslate();
 }
 
-// 更新自動翻譯按鈕狀態
+// 更新自動翻譯狀態顯示
 function updateAutoTranslateButton() {
-  const autoTranslateToggle = document.getElementById('auto-translate-toggle');
-  if (!autoTranslateToggle) return;
+  const translateSection = document.getElementById('translate-section');
+  
+  if (!translateSection) {
+    debugLog('translateSection not found, will retry later');
+    return;
+  }
   
   if (autoTranslateEnabled) {
-    autoTranslateToggle.classList.add('enabled');
-    autoTranslateToggle.title = '自動翻譯已開啟 (點擊關閉)';
+    translateSection.classList.add('auto-translate-enabled');
+    translateSection.title = getLocalizedMessage('auto_translate_enabled', '左鍵：翻譯頁面 | 右鍵：關閉自動翻譯');
+    debugLog('Auto-translate indicator enabled');
   } else {
-    autoTranslateToggle.classList.remove('enabled');
-    autoTranslateToggle.title = '自動翻譯已關閉 (點擊開啟)';
+    translateSection.classList.remove('auto-translate-enabled');
+    translateSection.title = getLocalizedMessage('auto_translate_disabled', '左鍵：翻譯頁面 | 右鍵：開啟自動翻譯');
+    debugLog('Auto-translate indicator disabled');
   }
 }
 
@@ -1246,13 +1302,13 @@ function updateFloatingButton(status) {
       progressText.style.display = 'block';
       floatingButton.classList.add('translating');
       translateSection.classList.add('translating');
-      floatingButton.setAttribute('title', '翻譯中...');
+      floatingButton.setAttribute('title', getLocalizedMessage('translating', '翻譯中...'));
       // 初始化進度環
       updateFloatingButtonProgress(0);
       break;
     case 'translated':
       translateIcon.style.display = 'block';
-      floatingButton.setAttribute('title', '點擊恢復原文');
+      floatingButton.setAttribute('title', getLocalizedMessage('restore_original', '點擊恢復原文'));
       break;
   }
 }
@@ -1395,6 +1451,11 @@ function initializeFloatingButton() {
 
 // 初始化
 initializeFloatingButton();
+
+// 確保在DOM完全創建後更新自動翻譯狀態
+setTimeout(() => {
+  updateAutoTranslateButton();
+}, 200);
 
 // 自動翻譯邏輯
 async function checkAndAutoTranslate() {

@@ -1,43 +1,46 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>TransCraft 設定</title>
+    <title data-i18n="extension_name">TransCraft</title>
     <link rel="stylesheet" href="css/options.css">
 </head>
 <body>
     <div class="container">
-        <h1 id="settings-title" style="cursor: default; user-select: none;">TransCraft 設定</h1>
+        <h1 id="settings-title" style="cursor: default; user-select: none;" data-i18n="settings_title">TransCraft Settings</h1>
+        
+        <!-- Language Selection Section -->
+        <div class="section">
+            <h2 data-i18n="language_settings">Language Settings</h2>
+            <p class="section-description" data-i18n="language_settings_desc">Select the interface language for the extension</p>
+            <div class="form-group">
+                <label for="interface-language" data-i18n="interface_language">Interface Language</label>
+                <select id="interface-language">
+                    <option value="en">English</option>
+                    <option value="zh-TW">繁體中文</option>
+                    <option value="ja">日本語</option>
+                </select>
+            </div>
+        </div>
         
         <div class="section">
-            <h2>選擇翻譯服務</h2>
-            <div class="radio-group">
-                <label>
-                    <input type="radio" name="api" value="openai" id="openai-radio">
-                    OpenAI (ChatGPT)
-                </label>
-                <label>
-                    <input type="radio" name="api" value="claude" id="claude-radio">
-                    Claude (Anthropic)
-                </label>
-                <label>
-                    <input type="radio" name="api" value="gemini" id="gemini-radio">
-                    Gemini (Google)
-                </label>
-                <label>
-                    <input type="radio" name="api" value="openrouter" id="openrouter-radio">
-                    OpenRouter
-                </label>
-                <label>
-                    <input type="radio" name="api" value="ollama" id="ollama-radio">
-                    Ollama (本地)
-                </label>
+            <h2 data-i18n="select_translation_service">Select Translation Service</h2>
+            <div class="form-group">
+                <label for="api-service-select" data-i18n="translation_service">Translation Service</label>
+                <select id="api-service-select">
+                    <option value="" data-i18n="please_select_service">Please select a service</option>
+                    <option value="openai">OpenAI (ChatGPT)</option>
+                    <option value="claude">Claude (Anthropic)</option>
+                    <option value="gemini">Gemini (Google)</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="ollama">Ollama (Local)</option>
+                </select>
             </div>
         </div>
 
         <div class="section">
-            <h2 id="api-section-title">API Key 設定</h2>
-            <p class="section-description">請先選擇翻譯服務，然後設定對應的 API Key</p>
+            <h2 id="api-section-title" data-i18n="api_key_settings">API Key Settings</h2>
+            <p class="section-description" data-i18n="please_select_service_first">Please select a translation service first, then configure the corresponding API Key</p>
             
             <div class="api-section" id="openai-section" style="display: none;">
                 <h3>🤖 OpenAI API Key</h3>
@@ -115,10 +118,10 @@
         </div>
 
         <div class="section">
-            <h2>預設設定</h2>
+            <h2 data-i18n="default_settings">Default Settings</h2>
             
             <div class="form-group">
-                <label for="target-language">目標語言</label>
+                <label for="target-language" data-i18n="target_language">Target Language</label>
                 <select id="target-language">
                     <option value="zh-TW">繁體中文</option>
                     <option value="zh-CN">簡體中文</option>
@@ -132,7 +135,7 @@
             </div>
 
             <div class="form-group" id="model-selection-group" style="display: none;">
-                <label for="model-select">AI 模型</label>
+                <label for="model-select" data-i18n="ai_model">AI Model</label>
                 <select id="model-select">
                     <!-- 動態填充選項 -->
                 </select>
@@ -143,50 +146,50 @@
 
             <div class="no-model-available" id="no-model-message">
                 <div class="placeholder-icon">🤖</div>
-                <p>請先選擇翻譯服務以查看可用的 AI 模型</p>
+                <p data-i18n="please_select_service_for_models">Please select a translation service to view available AI models</p>
             </div>
         </div>
 
         <div class="section">
-            <h2>翻譯批次設定</h2>
-            <p class="section-description">調整翻譯處理的批次大小，影響翻譯速度和 API 使用效率</p>
+            <h2 data-i18n="translation_batch_settings">Translation Batch Settings</h2>
+            <p class="section-description" data-i18n="batch_settings_desc">Adjust translation processing batch size, affects translation speed and API usage efficiency</p>
             
             <div class="form-group">
-                <label for="max-batch-length">批次最大字元數</label>
+                <label for="max-batch-length" data-i18n="batch_max_chars">Batch Maximum Characters</label>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="number" id="max-batch-length" min="1000" max="60000" step="1000" value="8000" style="flex: 1;">
                     <button type="button" id="auto-adjust-batch-size" class="secondary-button" title="根據所選模型自動調整批次大小">
-                        🎯 自動調整
+                        🎯 <span data-i18n="auto_adjust">Auto Adjust</span>
                     </button>
                 </div>
-                <small class="help-text">單次翻譯請求的最大字元數，範圍：1000-60000。點擊「自動調整」根據所選模型優化批次大小</small>
+                <small class="help-text" data-i18n="batch_max_chars_help">Maximum characters per translation request, range: 1000-60000. Click "Auto Adjust" to optimize batch size based on selected model</small>
             </div>
 
             <div class="form-group">
-                <label for="max-batch-elements">批次最大元素數</label>
+                <label for="max-batch-elements" data-i18n="batch_max_elements">Batch Maximum Elements</label>
                 <input type="number" id="max-batch-elements" min="1" step="1" value="20">
-                <small class="help-text">單次翻譯請求的最大元素數量，無上限限制，由字元數自動控制</small>
+                <small class="help-text" data-i18n="batch_max_elements_help">Maximum number of elements per translation request, no upper limit, automatically controlled by character count</small>
             </div>
 
             <div class="form-group">
-                <label for="request-timeout">翻譯請求超時時間（秒）</label>
+                <label for="request-timeout" data-i18n="request_timeout">Translation Request Timeout (seconds)</label>
                 <input type="number" id="request-timeout" min="15" max="120" step="5" value="60">
-                <small class="help-text">單次翻譯請求的最長等待時間，建議範圍：30-60 秒</small>
+                <small class="help-text" data-i18n="request_timeout_help">Maximum wait time for a single translation request, recommended range: 30-60 seconds</small>
             </div>
 
             <div class="batch-info">
                 <div class="info-item">
-                    <strong>較小批次：</strong>翻譯速度較慢，但更穩定，適合複雜內容
+                    <strong data-i18n="smaller_batches">Smaller Batches:</strong><span data-i18n="smaller_batches">Slower translation speed, but more stable, suitable for complex content</span>
                 </div>
                 <div class="info-item">
-                    <strong>較大批次：</strong>翻譯速度較快，但可能影響品質，適合簡單內容
+                    <strong data-i18n="larger_batches">Larger Batches:</strong><span data-i18n="larger_batches">Faster translation speed, but may affect quality, suitable for simple content</span>
                 </div>
             </div>
         </div>
 
         <div class="section">
-            <h2>專家模式管理</h2>
-            <p class="section-description">自定義不同類型內容的翻譯提示詞</p>
+            <h2 data-i18n="expert_mode_management">Expert Mode Management</h2>
+            <p class="section-description" data-i18n="expert_mode_desc">Customize translation prompts for different types of content</p>
             
             <div class="expert-modes-list" id="expert-modes-list">
                 <!-- 動態填充專家模式列表 -->
@@ -198,21 +201,21 @@
         </div>
 
         <div class="section" id="debug-section" style="display: none;">
-            <h2>🐛 除錯模式</h2>
-            <p class="section-description">開發者選項 - 開啟後會在控制台顯示詳細的除錯資訊</p>
+            <h2 data-i18n="debug_mode">🐛 Debug Mode</h2>
+            <p class="section-description" data-i18n="debug_mode_desc">Developer option - When enabled, detailed debug information will be displayed in the console</p>
             
             <div class="form-group">
                 <label>
                     <input type="checkbox" id="debug-mode-checkbox">
-                    <span style="margin-left: 8px;">啟用除錯模式</span>
+                    <span style="margin-left: 8px;" data-i18n="enable_debug_mode">Enable Debug Mode</span>
                 </label>
-                <small class="help-text">開啟後會記錄 API 請求/回應、翻譯過程等詳細資訊到瀏覽器控制台</small>
+                <small class="help-text" data-i18n="debug_mode_help">When enabled, API requests/responses, translation process and other detailed information will be logged to browser console</small>
             </div>
         </div>
 
         <div class="button-group">
-            <button id="save-button" class="primary-button">儲存設定</button>
-            <button id="test-button" class="secondary-button">測試連接</button>
+            <button id="save-button" class="primary-button" data-i18n="save_settings_btn">Save Settings</button>
+            <button id="test-button" class="secondary-button" data-i18n="test_connection_btn">Test Connection</button>
         </div>
 
         <div id="status-message" class="status-message"></div>
@@ -222,39 +225,40 @@
     <div id="expert-mode-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modal-title">新增專家模式</h3>
+                <h3 id="modal-title" data-i18n="add_expert_mode_title">Add Expert Mode</h3>
                 <button class="modal-close" id="modal-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="expert-mode-id">模式 ID</label>
+                    <label for="expert-mode-id" data-i18n="mode_id">Mode ID</label>
                     <input type="text" id="expert-mode-id" placeholder="例如: novel, technical, academic">
-                    <small class="help-text">唯一識別碼，只能包含英文字母、數字和底線</small>
+                    <small class="help-text" data-i18n="mode_id_help">Unique identifier, can only contain English letters, numbers and underscores</small>
                 </div>
                 
                 <div class="form-group">
-                    <label for="expert-mode-name">模式名稱</label>
+                    <label for="expert-mode-name" data-i18n="mode_name">Mode Name</label>
                     <input type="text" id="expert-mode-name" placeholder="例如: 小說模式">
                 </div>
                 
                 <div class="form-group">
-                    <label for="expert-mode-description">模式描述</label>
+                    <label for="expert-mode-description" data-i18n="mode_description">Mode Description</label>
                     <input type="text" id="expert-mode-description" placeholder="例如: 適合文學作品翻譯，保持文學性和情感表達">
                 </div>
                 
                 <div class="form-group">
-                    <label for="expert-mode-prompt">系統提示詞</label>
+                    <label for="expert-mode-prompt" data-i18n="system_prompt">System Prompt</label>
                     <textarea id="expert-mode-prompt" rows="8" placeholder="例如: You are a literary translator specializing in novels and creative works. Translate the following text to {targetLanguage}..."></textarea>
-                    <small class="help-text">使用 {targetLanguage} 作為目標語言的佔位符</small>
+                    <small class="help-text" data-i18n="system_prompt_help">Use {targetLanguage} as a placeholder for the target language</small>
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="modal-cancel" class="secondary-button">取消</button>
-                <button id="modal-save" class="primary-button">儲存</button>
+                <button id="modal-cancel" class="secondary-button" data-i18n="cancel">Cancel</button>
+                <button id="modal-save" class="primary-button" data-i18n="save">Save</button>
             </div>
         </div>
     </div>
 
+    <script src="js/i18n.js"></script>
     <script src="js/options.js"></script>
 </body>
 </html>

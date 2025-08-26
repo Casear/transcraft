@@ -3,7 +3,12 @@
     "allow": [
       "WebFetch(domain:openrouter.ai)",
       "WebFetch(domain:ncode.syosetu.com)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(ls:*)",
+      "Bash(git stash:*)",
+      "Bash(git merge:*)",
+      "Bash(open options.html)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }

@@ -1,10 +1,14 @@
 document.addEventListener('DOMContentLoaded', async function() {
-    const apiRadios = document.querySelectorAll('input[name="api"]');
+    // Initialize i18n
+    await window.i18n.initI18n();
+    
+    const apiServiceSelect = document.getElementById('api-service-select');
     const saveButton = document.getElementById('save-button');
     const testButton = document.getElementById('test-button');
     const statusMessage = document.getElementById('status-message');
     const targetLanguageSelect = document.getElementById('target-language');
     const modelSelect = document.getElementById('model-select');
+    const interfaceLanguageSelect = document.getElementById('interface-language');
     
     // Batch settings elements
     const maxBatchLengthInput = document.getElementById('max-batch-length');
@@ -269,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         ]);
 
         if (settings.selectedApi) {
-            document.getElementById(`${settings.selectedApi}-radio`).checked = true;
+            apiServiceSelect.value = settings.selectedApi;
             updateModelOptions(settings.selectedApi);
             showSelectedApiSection(settings.selectedApi);
         }
@@ -474,9 +478,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    apiRadios.forEach(radio => {
-        radio.addEventListener('change', async (e) => {
-            const selectedApi = e.target.value;
+    apiServiceSelect.addEventListener('change', async (e) => {
+        const selectedApi = e.target.value;
+        if (selectedApi) {
             updateModelOptions(selectedApi);
             showSelectedApiSection(selectedApi);
             
@@ -492,12 +496,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                     await updateBatchSizeForModel(selectedApi, apiData.defaultModel);
                 }, 200); // Small delay to ensure model select is populated
             }
-        });
+        } else {
+            updateModelOptions(null);
+            showSelectedApiSection(null);
+        }
     });
 
     // Add event listener for model selection change
     modelSelect.addEventListener('change', async (e) => {
-        const selectedApi = document.querySelector('input[name="api"]:checked')?.value;
+        const selectedApi = apiServiceSelect.value;
         if (selectedApi) {
             await updateBatchSizeForModel(selectedApi, e.target.value);
         }
@@ -505,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Also listen for input events in case change doesn't fire
     modelSelect.addEventListener('input', async (e) => {
-        const selectedApi = document.querySelector('input[name="api"]:checked')?.value;
+        const selectedApi = apiServiceSelect.value;
         if (selectedApi) {
             await updateBatchSizeForModel(selectedApi, e.target.value);
         }
@@ -513,7 +520,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Add event listener for manual batch size adjustment button
     autoAdjustBatchSizeButton.addEventListener('click', async () => {
-        const selectedApi = document.querySelector('input[name="api"]:checked')?.value;
+        const selectedApi = apiServiceSelect.value;
         const selectedModel = modelSelect.value;
         
         if (!selectedApi) {
@@ -544,7 +551,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     saveButton.addEventListener('click', async () => {
-        const selectedApi = document.querySelector('input[name="api"]:checked')?.value;
+        const selectedApi = apiServiceSelect.value;
         
         if (!selectedApi) {
             showStatus('請選擇一個 API 服務', 'error');
@@ -611,7 +618,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     testButton.addEventListener('click', async () => {
-        const selectedApi = document.querySelector('input[name="api"]:checked')?.value;
+        const selectedApi = apiServiceSelect.value;
         const apiKey = apiInputs[selectedApi]?.value;
 
         if (!selectedApi || (!apiKey && selectedApi !== 'ollama')) {
@@ -829,6 +836,142 @@ document.addEventListener('DOMContentLoaded', async function() {
             closeModal();
         }
     });
+    
+    // i18n functions
+    function updateUI() {
+        // Update all elements with data-i18n attributes
+        const elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            const text = window.i18n.getMessage(key);
+            
+            if (element.tagName === 'INPUT' && element.type === 'text') {
+                element.placeholder = text;
+            } else if (element.tagName === 'TEXTAREA') {
+                element.placeholder = text;
+            } else if (element.tagName === 'TITLE') {
+                element.textContent = text;
+                document.title = text;
+            } else {
+                element.textContent = text;
+            }
+        });
+        
+        // Update language-specific content that can't use data-i18n
+        updateLanguageOptions();
+        updateDynamicContent();
+    }
+    
+    function updateLanguageOptions() {
+        // Update target language options
+        if (targetLanguageSelect) {
+            targetLanguageSelect.innerHTML = `
+                <option value="zh-TW">${window.i18n.getMessage('lang_zh_tw')}</option>
+                <option value="zh-CN">${window.i18n.getMessage('lang_zh_cn')}</option>
+                <option value="en">${window.i18n.getMessage('lang_en')}</option>
+                <option value="ja">${window.i18n.getMessage('lang_ja')}</option>
+                <option value="ko">${window.i18n.getMessage('lang_ko')}</option>
+                <option value="es">${window.i18n.getMessage('lang_es')}</option>
+                <option value="fr">${window.i18n.getMessage('lang_fr')}</option>
+                <option value="de">${window.i18n.getMessage('lang_de')}</option>
+            `;
+        }
+    }
+    
+    function updateDynamicContent() {
+        // Update buttons
+        if (saveButton) saveButton.textContent = window.i18n.getMessage('save_settings_btn');
+        if (testButton) testButton.textContent = window.i18n.getMessage('test_connection_btn');
+        
+        // Update placeholders that aren't handled by data-i18n
+        const openaiKey = document.getElementById('openai-key');
+        const claudeKey = document.getElementById('claude-key');
+        const geminiKey = document.getElementById('gemini-key');
+        const openrouterKey = document.getElementById('openrouter-key');
+        const ollamaKey = document.getElementById('ollama-key');
+        
+        if (openaiKey) openaiKey.placeholder = 'sk-proj-...';
+        if (claudeKey) claudeKey.placeholder = 'sk-ant-...';
+        if (geminiKey) geminiKey.placeholder = 'AIza...';
+        if (openrouterKey) openrouterKey.placeholder = 'sk-or-...';
+        if (ollamaKey) {
+            ollamaKey.placeholder = window.i18n.getMessage('no_api_key_required');
+            ollamaKey.disabled = true;
+            ollamaKey.style.backgroundColor = '#f5f5f5';
+        }
+        
+        // Update modal content
+        updateModalContent();
+    }
+    
+    function updateModalContent() {
+        // Update modal elements
+        const modalTitle = document.getElementById('modal-title');
+        const modalCancel = document.getElementById('modal-cancel');
+        const modalSave = document.getElementById('modal-save');
+        const expertModeId = document.getElementById('expert-mode-id');
+        const expertModeName = document.getElementById('expert-mode-name');
+        const expertModeDesc = document.getElementById('expert-mode-description');
+        const expertModePrompt = document.getElementById('expert-mode-prompt');
+        
+        if (modalCancel) modalCancel.textContent = window.i18n.getMessage('cancel');
+        if (modalSave) modalSave.textContent = window.i18n.getMessage('save');
+        
+        if (expertModeId) expertModeId.placeholder = window.i18n.getMessage('mode_id_placeholder');
+        if (expertModeName) expertModeName.placeholder = window.i18n.getMessage('mode_name_placeholder');
+        if (expertModeDesc) expertModeDesc.placeholder = window.i18n.getMessage('mode_description_placeholder');
+        if (expertModePrompt) expertModePrompt.placeholder = window.i18n.getMessage('system_prompt_placeholder');
+        
+        // Update add expert mode button
+        const addExpertButton = document.getElementById('add-expert-mode-button');
+        if (addExpertButton) {
+            addExpertButton.innerHTML = `<span>${window.i18n.getMessage('add_expert_mode')}</span>`;
+        }
+    }
+    
+    // Language change handler
+    interfaceLanguageSelect.addEventListener('change', async (e) => {
+        const newLanguage = e.target.value;
+        await window.i18n.setLanguage(newLanguage);
+        
+        // Update the HTML lang attribute
+        document.documentElement.lang = newLanguage;
+        
+        // Update all UI text
+        updateUI();
+        
+        // Show success message
+        showStatus(window.i18n.getMessage('settings_saved'), 'success');
+    });
+    
+    // Load and set initial interface language
+    async function loadInterfaceLanguage() {
+        try {
+            const result = await chrome.storage.sync.get(['interfaceLanguage']);
+            const savedLanguage = result.interfaceLanguage || 'en';
+            
+            // Set the select value
+            interfaceLanguageSelect.value = savedLanguage;
+            
+            // Set the language in i18n system
+            await window.i18n.setLanguage(savedLanguage);
+            
+            // Update HTML lang attribute
+            document.documentElement.lang = savedLanguage;
+            
+            // Update UI
+            updateUI();
+        } catch (error) {
+            console.warn('Failed to load interface language:', error);
+            // Fallback to English
+            interfaceLanguageSelect.value = 'en';
+            await window.i18n.setLanguage('en');
+            updateUI();
+        }
+    }
+    
+    // Initialize interface language first
+    await loadInterfaceLanguage();
     
     await loadSettings();
     await loadExpertModes();

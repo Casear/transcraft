@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize i18n first
+    await window.i18n.initI18n();
+    
     const translateButton = document.getElementById('translate-button');
     const buttonText = document.getElementById('button-text');
     const settingsButton = document.getElementById('settings-button');
@@ -8,6 +11,39 @@ document.addEventListener('DOMContentLoaded', async function() {
     const expertModeSelect = document.getElementById('popup-expert-mode');
 
     let isTranslated = false;
+    
+    // Initialize UI with localized text
+    function updateUI() {
+        // Update all elements with data-i18n attributes
+        const elements = document.querySelectorAll('[data-i18n]');
+        elements.forEach(element => {
+            const key = element.getAttribute('data-i18n');
+            const text = window.i18n.getMessage(key);
+            
+            if (element.tagName === 'TITLE') {
+                element.textContent = text;
+                document.title = text;
+            } else {
+                element.textContent = text;
+            }
+        });
+        
+        // Update language options
+        populateLanguageOptions();
+    }
+    
+    function populateLanguageOptions() {
+        languageSelect.innerHTML = `
+            <option value="zh-TW">${window.i18n.getMessage('lang_zh_tw')}</option>
+            <option value="zh-CN">${window.i18n.getMessage('lang_zh_cn')}</option>
+            <option value="en">${window.i18n.getMessage('lang_en')}</option>
+            <option value="ja">${window.i18n.getMessage('lang_ja')}</option>
+            <option value="ko">${window.i18n.getMessage('lang_ko')}</option>
+            <option value="es">${window.i18n.getMessage('lang_es')}</option>
+            <option value="fr">${window.i18n.getMessage('lang_fr')}</option>
+            <option value="de">${window.i18n.getMessage('lang_de')}</option>
+        `;
+    }
 
     async function loadExpertModes() {
         try {
@@ -32,13 +68,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         if (!settings.selectedApi || !settings.apiKeys?.[settings.selectedApi]) {
             statusIcon.className = 'status-icon error';
-            statusText.textContent = '請設定 API Key';
+            statusText.textContent = window.i18n.getMessage('please_set_api_key');
             translateButton.disabled = true;
             return false;
         }
         
         statusIcon.className = 'status-icon ready';
-        statusText.textContent = `已連接 ${settings.selectedApi.toUpperCase()}`;
+        statusText.textContent = `${window.i18n.getMessage('connected_to')} ${settings.selectedApi.toUpperCase()}`;
         translateButton.disabled = false;
         
         if (settings.targetLanguage) {
@@ -69,10 +105,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     function updateButtonState() {
         if (isTranslated) {
             translateButton.classList.add('translated');
-            buttonText.textContent = '恢復原文';
+            buttonText.textContent = window.i18n.getMessage('restore_original');
         } else {
             translateButton.classList.remove('translated');
-            buttonText.textContent = '翻譯此頁面';
+            buttonText.textContent = window.i18n.getMessage('translate_page');
         }
     }
 
@@ -83,7 +119,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         translateButton.classList.add('translating');
         
         const oldText = buttonText.textContent;
-        buttonText.textContent = '翻譯中...';
+        buttonText.textContent = window.i18n.getMessage('translating');
 
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -100,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             buttonText.textContent = oldText;
             
             if (error.message.includes('Cannot access contents')) {
-                alert('無法在此頁面上執行翻譯');
+                alert(window.i18n.getMessage('cannot_translate_on_page'));
             }
         } finally {
             translateButton.disabled = false;
@@ -142,6 +178,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         chrome.runtime.openOptionsPage();
     });
 
+    // Initialize UI with current language
+    updateUI();
+    
     await loadExpertModes();
     await checkAPIStatus();
     await checkTranslationStatus();

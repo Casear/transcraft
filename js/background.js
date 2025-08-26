@@ -6,6 +6,94 @@ const API_ENDPOINTS = {
   ollama: 'http://localhost:11434/api/chat'
 };
 
+// Model capabilities mapping (same as in options.js) - Updated for 2025
+const MODEL_CAPABILITIES = {
+  openai: {
+    'gpt-4.1': { contextWindow: 1000000, maxOutputTokens: 4096 },
+    'gpt-4.1-mini': { contextWindow: 1000000, maxOutputTokens: 4096 },
+    'gpt-4.1-nano': { contextWindow: 1000000, maxOutputTokens: 4096 },
+    'gpt-4o': { contextWindow: 128000, maxOutputTokens: 4096 },
+    'gpt-4o-mini': { contextWindow: 128000, maxOutputTokens: 4096 },
+    'gpt-4-turbo': { contextWindow: 128000, maxOutputTokens: 4096 },
+    'gpt-4': { contextWindow: 8192, maxOutputTokens: 4096 }
+  },
+  claude: {
+    'claude-4-opus-4.1': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'claude-4-sonnet': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'claude-3-7-sonnet': { contextWindow: 200000, maxOutputTokens: 128000 },
+    'claude-3-5-sonnet-20241022': { contextWindow: 200000, maxOutputTokens: 8192 },
+    'claude-3-5-haiku-20241022': { contextWindow: 200000, maxOutputTokens: 8192 }
+  },
+  gemini: {
+    'gemini-2.5-pro': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'gemini-2.5-flash': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'gemini-2.0-pro': { contextWindow: 2000000, maxOutputTokens: 8192 },
+    'gemini-2.0-flash': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'gemini-2.0-flash-lite': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'gemini-1.5-pro-002': { contextWindow: 2000000, maxOutputTokens: 8192 },
+    'gemini-1.5-flash-002': { contextWindow: 1000000, maxOutputTokens: 8192 }
+  },
+  openrouter: {
+    'meta-llama/llama-4-maverick:free': { contextWindow: 256000, maxOutputTokens: 8192 },
+    'meta-llama/llama-4-scout:free': { contextWindow: 512000, maxOutputTokens: 8192 },
+    'deepseek/deepseek-r1:free': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'deepseek/deepseek-r1-distill-llama-70b:free': { contextWindow: 131072, maxOutputTokens: 8192 },
+    'deepseek/deepseek-chat-v3-0324:free': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'google/gemma-3-27b-it:free': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'meta-llama/llama-3.3-70b-instruct:free': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'google/gemini-2.5-pro-exp-03-25:free': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'qwen/qwq-32b:free': { contextWindow: 131072, maxOutputTokens: 8192 },
+    'anthropic/claude-3-5-sonnet': { contextWindow: 200000, maxOutputTokens: 8192 },
+    'openai/gpt-4.1-mini': { contextWindow: 1000000, maxOutputTokens: 4096 },
+    'google/gemini-2.5-flash': { contextWindow: 1000000, maxOutputTokens: 8192 },
+    'mistralai/mistral-small-3.1-2503': { contextWindow: 128000, maxOutputTokens: 8192 }
+  },
+  ollama: {
+    'gpt-oss:20b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'gpt-oss:120b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'deepseek-r1': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'llama3.3:70b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'llama3.2:11b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'llama3.2:90b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'llama3.1:8b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'llama3.2:3b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'llama3.2:1b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'gemma3:27b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'gemma2:9b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'gemma2:2b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'mistral-small3.1': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'mistral:7b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'qwen2.5:7b': { contextWindow: 128000, maxOutputTokens: 8192 },
+    'qwen2.5:72b': { contextWindow: 128000, maxOutputTokens: 8192 }
+  }
+};
+
+// Function to get maximum output tokens for a specific model
+function getMaxTokensForModel(model, api) {
+  const modelInfo = MODEL_CAPABILITIES[api]?.[model];
+  if (modelInfo?.maxOutputTokens) {
+    // For translation, use 90% of max output tokens to account for translation expansion
+    // Translation often results in longer text (especially EN -> Chinese)
+    const safetyMargin = 0.9;
+    let outputTokens = Math.floor(modelInfo.maxOutputTokens * safetyMargin);
+    
+    // Ensure minimum viable token count for translation
+    const minTokens = Math.min(2000, Math.floor(modelInfo.maxOutputTokens * 0.5));
+    outputTokens = Math.max(outputTokens, minTokens);
+    
+    // Apply API-specific hard limits
+    if (api === 'gemini') {
+      // Gemini has absolute hard limit of 8192
+      outputTokens = Math.min(outputTokens, 7372); // 90% of 8192
+    }
+    
+    return outputTokens;
+  }
+  
+  // Fallback to conservative defaults
+  return 3600; // 90% of 4000
+}
+
 // Debug logging utilities
 async function getDebugMode() {
   const settings = await chrome.storage.sync.get(['debugMode']);
@@ -190,7 +278,7 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
       }
     ],
     temperature: 0.3,
-    max_tokens: 2000
+    max_tokens: getMaxTokensForModel(model, 'openai')
   };
 
   if (debugMode) {
@@ -305,7 +393,7 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
     },
     body: JSON.stringify({
       model: model,
-      max_tokens: 2000,
+      max_tokens: getMaxTokensForModel(model, 'claude'),
       temperature: 0.3,
       messages: [
         {
@@ -397,7 +485,7 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
       ],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2000
+        maxOutputTokens: getMaxTokensForModel(model, 'gemini')
       }
     })
   });
@@ -440,13 +528,32 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
 
   const data = await response.json();
   
-  if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || 
-      !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+  // 檢查是否有候選結果
+  if (!data.candidates || !data.candidates[0]) {
     console.error('Invalid Gemini response structure:', JSON.stringify(data, null, 2));
     throw new Error('Gemini返回無效的響應結構');
   }
   
-  return data.candidates[0].content.parts[0].text;
+  const candidate = data.candidates[0];
+  
+  // 檢查完成原因
+  if (candidate.finishReason === 'MAX_TOKENS') {
+    console.warn('Gemini hit max token limit:', JSON.stringify(data, null, 2));
+    throw new Error('Gemini 回應超過 token 限制，請減少翻譯內容量或調整批次大小');
+  }
+  
+  if (candidate.finishReason === 'SAFETY') {
+    console.warn('Gemini blocked for safety reasons:', JSON.stringify(data, null, 2));
+    throw new Error('Gemini 因安全原因拒絕翻譯此內容');
+  }
+  
+  // 檢查是否有實際內容
+  if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0] || !candidate.content.parts[0].text) {
+    console.error('Gemini response missing translation text:', JSON.stringify(data, null, 2));
+    throw new Error('Gemini 回應中沒有翻譯文本');
+  }
+  
+  return candidate.content.parts[0].text;
 }
 
 async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'meta-llama/llama-3.1-8b-instruct:free', expertMode = 'general') {
@@ -486,7 +593,7 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
         }
       ],
       temperature: 0.3,
-      max_tokens: 2000
+      max_tokens: getMaxTokensForModel(model, 'openrouter')
     })
   });
 
