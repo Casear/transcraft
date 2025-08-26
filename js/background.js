@@ -148,7 +148,7 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
     try {
       const error = await response.json();
       errorMessage = error.error?.message || error.message || `OpenAI API error (${response.status})`;
-      console.error('OpenAI API error details:', error);
+      console.error('OpenAI API error details:', JSON.stringify(error, null, 2));
     } catch (parseError) {
       console.error('Failed to parse OpenAI error response:', parseError);
       errorMessage = `OpenAI API error (${response.status}: ${response.statusText})`;
@@ -159,7 +159,7 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
   const data = await response.json();
   
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-    console.error('Invalid OpenAI response structure:', data);
+    console.error('Invalid OpenAI response structure:', JSON.stringify(data, null, 2));
     throw new Error('OpenAI返回無效的響應結構');
   }
   
@@ -207,7 +207,7 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
     try {
       const error = await response.json();
       errorMessage = error.error?.message || error.message || `Claude API error (${response.status})`;
-      console.error('Claude API error details:', error);
+      console.error('Claude API error details:', JSON.stringify(error, null, 2));
     } catch (parseError) {
       console.error('Failed to parse Claude error response:', parseError);
       errorMessage = `Claude API error (${response.status}: ${response.statusText})`;
@@ -218,7 +218,7 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
   const data = await response.json();
   
   if (!data.content || !data.content[0] || !data.content[0].text) {
-    console.error('Invalid Claude response structure:', data);
+    console.error('Invalid Claude response structure:', JSON.stringify(data, null, 2));
     throw new Error('Claude返回無效的響應結構');
   }
   
@@ -270,7 +270,7 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
     try {
       const error = await response.json();
       errorMessage = error.error?.message || error.message || `Gemini API error (${response.status})`;
-      console.error('Gemini API error details:', error);
+      console.error('Gemini API error details:', JSON.stringify(error, null, 2));
     } catch (parseError) {
       console.error('Failed to parse Gemini error response:', parseError);
       errorMessage = `Gemini API error (${response.status}: ${response.statusText})`;
@@ -282,7 +282,7 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
   
   if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || 
       !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-    console.error('Invalid Gemini response structure:', data);
+    console.error('Invalid Gemini response structure:', JSON.stringify(data, null, 2));
     throw new Error('Gemini返回無效的響應結構');
   }
   
@@ -335,7 +335,7 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
     try {
       const error = await response.json();
       errorMessage = error.error?.message || error.message || `OpenRouter API error (${response.status})`;
-      console.error('OpenRouter API error details:', error);
+      console.error('OpenRouter API error details:', JSON.stringify(error, null, 2));
     } catch (parseError) {
       console.error('Failed to parse OpenRouter error response:', parseError);
       errorMessage = `OpenRouter API error (${response.status}: ${response.statusText})`;
@@ -346,7 +346,7 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
   const data = await response.json();
   
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-    console.error('Invalid OpenRouter response structure:', data);
+    console.error('Invalid OpenRouter response structure:', JSON.stringify(data, null, 2));
     throw new Error('OpenRouter返回無效的響應結構');
   }
   
@@ -403,7 +403,7 @@ async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'l
         }
       }
       errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
-      console.error('Ollama API error details:', errorMessage);
+      console.error('Ollama API error details:', { status: response.status, statusText: response.statusText, errorText: errorText });
     } catch (parseError) {
       console.error('Failed to parse Ollama error response:', parseError);
       errorMessage = `Ollama API error (${response.status}: ${response.statusText})`;
@@ -414,7 +414,7 @@ async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'l
   const data = await response.json();
   
   if (!data.message || !data.message.content) {
-    console.error('Invalid Ollama response structure:', data);
+    console.error('Invalid Ollama response structure:', JSON.stringify(data, null, 2));
     throw new Error('Ollama返回無效的響應結構');
   }
   
