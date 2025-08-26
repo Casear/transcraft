@@ -215,8 +215,9 @@ async function translateText(text, apiConfig) {
         }, (response) => {
           // 檢查Chrome runtime錯誤
           if (chrome.runtime.lastError) {
-            console.error('Chrome runtime error:', chrome.runtime.lastError);
-            reject(new Error(chrome.runtime.lastError.message || 'EXTENSION_CONTEXT_INVALID'));
+            const errorMessage = chrome.runtime.lastError.message || JSON.stringify(chrome.runtime.lastError) || 'EXTENSION_CONTEXT_INVALID';
+            console.error('Chrome runtime error:', errorMessage);
+            reject(new Error(errorMessage));
             return;
           }
           
