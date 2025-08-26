@@ -424,28 +424,50 @@ async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'l
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'translate') {
     handleTranslation(request).then(sendResponse).catch(error => {
+      console.error('Translation error in background:', error);
       sendResponse({ error: error.message });
     });
-    return true;
+    return true; // 表示異步響應
   } else if (request.action === 'testConnection') {
     testAPIConnection(request).then(sendResponse).catch(error => {
+      console.error('Test connection error in background:', error);
       sendResponse({ success: false, error: error.message });
     });
-    return true;
+    return true; // 表示異步響應
   } else if (request.action === 'getExpertModes') {
     getExpertModePrompts().then(expertModes => {
       sendResponse({ expertModes });
+    }).catch(error => {
+      console.error('Get expert modes error in background:', error);
+      sendResponse({ expertModes: {}, error: error.message });
     });
-    return true;
+    return true; // 表示異步響應
   } else if (request.action === 'saveExpertMode') {
-    saveExpertMode(request).then(sendResponse);
-    return true;
+    saveExpertMode(request).then(sendResponse).catch(error => {
+      console.error('Save expert mode error in background:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // 表示異步響應
   } else if (request.action === 'deleteExpertMode') {
-    deleteExpertMode(request).then(sendResponse);
-    return true;
+    deleteExpertMode(request).then(sendResponse).catch(error => {
+      console.error('Delete expert mode error in background:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // 表示異步響應
   } else if (request.action === 'openOptions') {
-    chrome.runtime.openOptionsPage();
+    try {
+      chrome.runtime.openOptionsPage();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('Open options error in background:', error);
+      sendResponse({ success: false, error: error.message });
+    }
+    return false; // 同步響應
   }
+  
+  // 如果沒有匹配的action，返回錯誤
+  sendResponse({ error: 'Unknown action' });
+  return false;
 });
 
 async function handleTranslation(request) {

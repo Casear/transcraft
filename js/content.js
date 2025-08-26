@@ -205,6 +205,16 @@ async function translateText(text, apiConfig) {
     }
     
     const response = await new Promise((resolve, reject) => {
+      let isResolved = false;
+      
+      // 設定超時機制 (30秒)
+      const timeoutId = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          reject(new Error('TIMEOUT_ERROR: Translation request timed out'));
+        }
+      }, 30000);
+      
       try {
         chrome.runtime.sendMessage({
           action: 'translate',
@@ -213,6 +223,11 @@ async function translateText(text, apiConfig) {
           apiConfig: apiConfig,
           expertMode: expertMode
         }, (response) => {
+          clearTimeout(timeoutId);
+          
+          if (isResolved) return; // 避免重複處理
+          isResolved = true;
+          
           // 檢查Chrome runtime錯誤
           if (chrome.runtime.lastError) {
             const errorMessage = chrome.runtime.lastError.message || JSON.stringify(chrome.runtime.lastError) || 'EXTENSION_CONTEXT_INVALID';
@@ -230,8 +245,12 @@ async function translateText(text, apiConfig) {
           resolve(response);
         });
       } catch (error) {
-        console.error('Error sending message:', error);
-        reject(error);
+        clearTimeout(timeoutId);
+        if (!isResolved) {
+          isResolved = true;
+          console.error('Error sending message:', error);
+          reject(error);
+        }
       }
     });
     
