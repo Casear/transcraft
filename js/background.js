@@ -144,11 +144,25 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'OpenAI API error');
+    let errorMessage = 'OpenAI API error';
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || error.message || `OpenAI API error (${response.status})`;
+      console.error('OpenAI API error details:', error);
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI error response:', parseError);
+      errorMessage = `OpenAI API error (${response.status}: ${response.statusText})`;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
+  
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    console.error('Invalid OpenAI response structure:', data);
+    throw new Error('OpenAI返回無效的響應結構');
+  }
+  
   return data.choices[0].message.content;
 }
 
@@ -189,11 +203,25 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Claude API error');
+    let errorMessage = 'Claude API error';
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || error.message || `Claude API error (${response.status})`;
+      console.error('Claude API error details:', error);
+    } catch (parseError) {
+      console.error('Failed to parse Claude error response:', parseError);
+      errorMessage = `Claude API error (${response.status}: ${response.statusText})`;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
+  
+  if (!data.content || !data.content[0] || !data.content[0].text) {
+    console.error('Invalid Claude response structure:', data);
+    throw new Error('Claude返回無效的響應結構');
+  }
+  
   return data.content[0].text;
 }
 
@@ -238,11 +266,26 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Gemini API error');
+    let errorMessage = 'Gemini API error';
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || error.message || `Gemini API error (${response.status})`;
+      console.error('Gemini API error details:', error);
+    } catch (parseError) {
+      console.error('Failed to parse Gemini error response:', parseError);
+      errorMessage = `Gemini API error (${response.status}: ${response.statusText})`;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
+  
+  if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || 
+      !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+    console.error('Invalid Gemini response structure:', data);
+    throw new Error('Gemini返回無效的響應結構');
+  }
+  
   return data.candidates[0].content.parts[0].text;
 }
 
@@ -288,11 +331,25 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'OpenRouter API error');
+    let errorMessage = 'OpenRouter API error';
+    try {
+      const error = await response.json();
+      errorMessage = error.error?.message || error.message || `OpenRouter API error (${response.status})`;
+      console.error('OpenRouter API error details:', error);
+    } catch (parseError) {
+      console.error('Failed to parse OpenRouter error response:', parseError);
+      errorMessage = `OpenRouter API error (${response.status}: ${response.statusText})`;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
+  
+  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    console.error('Invalid OpenRouter response structure:', data);
+    throw new Error('OpenRouter返回無效的響應結構');
+  }
+  
   return data.choices[0].message.content;
 }
 
@@ -334,11 +391,33 @@ async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'l
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || 'Ollama API error - 請確認 Ollama 服務正在運行');
+    let errorMessage = 'Ollama API error - 請確認 Ollama 服務正在運行';
+    try {
+      const errorText = await response.text();
+      if (errorText) {
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorJson.message || errorText;
+        } catch {
+          errorMessage = errorText;
+        }
+      }
+      errorMessage = `${errorMessage} (${response.status}: ${response.statusText})`;
+      console.error('Ollama API error details:', errorMessage);
+    } catch (parseError) {
+      console.error('Failed to parse Ollama error response:', parseError);
+      errorMessage = `Ollama API error (${response.status}: ${response.statusText})`;
+    }
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
+  
+  if (!data.message || !data.message.content) {
+    console.error('Invalid Ollama response structure:', data);
+    throw new Error('Ollama返回無效的響應結構');
+  }
+  
   return data.message.content;
 }
 
