@@ -169,11 +169,14 @@ function debugError(...args) {
   }
 }
 
-// Initialize i18n and settings from storage
-(async () => {
-  await initContentI18n();
-  
-  chrome.storage.sync.get(['debugMode', 'autoTranslateDomains'], (result) => {
+// Initialize settings from storage (async)
+let settingsLoaded = false;
+
+async function loadAutoTranslateSettings() {
+  try {
+    await initContentI18n();
+    
+    const result = await chrome.storage.sync.get(['debugMode', 'autoTranslateDomains']);
     debugMode = result.debugMode || false;
     if (debugMode) {
       console.log('[TransCraft Debug] Debug mode is ENABLED');
@@ -182,7 +185,9 @@ function debugError(...args) {
     // Check if auto-translate is enabled for current domain
     const autoTranslateDomains = result.autoTranslateDomains || {};
     autoTranslateEnabled = autoTranslateDomains[currentDomain] || false;
-    debugLog('Auto-translate for', currentDomain, ':', autoTranslateEnabled);
+    settingsLoaded = true;
+    
+    debugLog('Auto-translate settings loaded for', currentDomain, ':', autoTranslateEnabled);
     
     // Update UI when settings are loaded - retry multiple times to ensure button exists
     let retryCount = 0;
@@ -201,8 +206,21 @@ function debugError(...args) {
       }
     };
     updateButtonWithRetry();
-  });
-})();
+    
+    // Initial auto-translate check after settings are loaded (only if enabled)
+    if (autoTranslateEnabled) {
+      debugLog('Settings loaded and auto-translate enabled, performing initial check');
+      checkAndAutoTranslate();
+    }
+    
+  } catch (error) {
+    debugLog('Failed to load auto-translate settings:', error);
+    settingsLoaded = true; // Mark as loaded to prevent infinite waiting
+  }
+}
+
+// Load settings immediately
+loadAutoTranslateSettings();
 
 // Listen for debug mode changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -1655,48 +1673,97 @@ const initAutoTranslateButton = () => {
 };
 initAutoTranslateButton();
 
+// 追蹤自動翻譯檢查狀態，避免重複觸發
+let autoTranslateCheckInProgress = false;
+let lastAutoTranslateCheck = 0;
+
 // 自動翻譯邏輯
 async function checkAndAutoTranslate() {
-  if (!autoTranslateEnabled) {
-    debugLog('Auto-translate disabled for', currentDomain);
+  // 防止重複觸發（在3秒內）
+  const now = Date.now();
+  if (now - lastAutoTranslateCheck < 3000) {
+    debugLog('Auto-translate check too frequent, skipping');
     return;
   }
   
-  debugLog('Auto-translate is enabled for', currentDomain, ', checking if page should be translated');
-  
-  // 等待一秒讓頁面加載完成
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // 檢查是否已經有API配置
-  const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'enableLanguageDetection']);
-  if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
-    debugLog('No API configuration found, skipping auto-translate');
+  if (autoTranslateCheckInProgress) {
+    debugLog('Auto-translate check already in progress, skipping');
     return;
   }
   
-  // 檢查頁面是否有可翻譯內容
-  const elements = getTranslatableElements();
-  if (elements.length === 0) {
-    debugLog('No translatable elements found, skipping auto-translate');
-    return;
-  }
+  autoTranslateCheckInProgress = true;
+  lastAutoTranslateCheck = now;
   
-  // 如果啟用語言檢測，先檢查是否需要翻譯
-  if (apiConfig.enableLanguageDetection !== false) {
-    const sampleTexts = elements.slice(0, 5).map(el => el.textContent).filter(text => text.trim().length > 20);
-    if (sampleTexts.length > 0) {
-      const sampleText = sampleTexts.join(' ').substring(0, 1000);
-      const detectedLanguage = await detectLanguage(sampleText);
-      
-      if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
-        debugLog('Auto-translate skipped: content is already in target language', detectedLanguage);
-        return;
+  try {
+    // Wait for settings to be loaded
+    let waitCount = 0;
+    const maxWait = 50; // 10 seconds max
+    while (!settingsLoaded && waitCount < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      waitCount++;
+      debugLog(`Waiting for settings to load... (${waitCount}/${maxWait})`);
+    }
+    
+    if (!settingsLoaded) {
+      debugLog('Settings failed to load, skipping auto-translate');
+      return;
+    }
+    
+    if (!autoTranslateEnabled) {
+      debugLog('Auto-translate disabled for', currentDomain);
+      return;
+    }
+    
+    // 檢查是否已經在翻譯或已翻譯
+    if (isTranslating) {
+      debugLog('Translation already in progress, skipping auto-translate');
+      return;
+    }
+    
+    if (isTranslated) {
+      debugLog('Page already translated, skipping auto-translate');
+      return;
+    }
+    
+    debugLog('Auto-translate is enabled for', currentDomain, ', checking if page should be translated');
+    
+    // 等待一秒讓頁面加載完成
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // 檢查是否已經有API配置
+    const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'enableLanguageDetection']);
+    if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
+      debugLog('No API configuration found, skipping auto-translate');
+      return;
+    }
+    
+    // 檢查頁面是否有可翻譯內容
+    const elements = getTranslatableElements();
+    if (elements.length === 0) {
+      debugLog('No translatable elements found, skipping auto-translate');
+      return;
+    }
+    
+    // 如果啟用語言檢測，先檢查是否需要翻譯
+    if (apiConfig.enableLanguageDetection !== false) {
+      const sampleTexts = elements.slice(0, 5).map(el => el.textContent).filter(text => text.trim().length > 20);
+      if (sampleTexts.length > 0) {
+        const sampleText = sampleTexts.join(' ').substring(0, 1000);
+        const detectedLanguage = await detectLanguage(sampleText);
+        
+        if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
+          debugLog('Auto-translate skipped: content is already in target language', detectedLanguage);
+          return;
+        }
       }
     }
+    
+    debugLog('Starting auto-translation for', elements.length, 'elements');
+    translatePage();
+    
+  } finally {
+    autoTranslateCheckInProgress = false;
   }
-  
-  debugLog('Starting auto-translation for', elements.length, 'elements');
-  translatePage();
 }
 
 // 監聽頁面導航變化 (適用於SPA)
@@ -1718,15 +1785,34 @@ new MutationObserver(() => {
   }
 }).observe(document, { subtree: true, childList: true });
 
-// 初始檢查自動翻譯
+// 多個載入事件監聽器以確保在各種情況下都能觸發自動翻譯
+
+// DOM內容載入完成
+document.addEventListener('DOMContentLoaded', () => {
+  debugLog('DOMContentLoaded event triggered');
+  checkAndAutoTranslate();
+});
+
+// 頁面完全載入完成
 window.addEventListener('load', () => {
+  debugLog('Window load event triggered');
   checkAndAutoTranslate();
 });
 
 // 如果頁面已經加載完成，立即檢查
 if (document.readyState === 'complete') {
+  debugLog('Page already loaded, checking auto-translate immediately');
+  checkAndAutoTranslate();
+} else if (document.readyState === 'interactive') {
+  debugLog('Page DOM is ready, checking auto-translate');
   checkAndAutoTranslate();
 }
+
+// 額外的延遲檢查，確保在動態內容載入後也能觸發
+setTimeout(() => {
+  debugLog('Delayed auto-translate check');
+  checkAndAutoTranslate();
+}, 3000);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'toggleTranslation') {
