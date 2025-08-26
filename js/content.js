@@ -32,9 +32,17 @@ function getLocalizedMessage(key, fallback = '') {
 
 // Language detection functions
 function detectLanguageByCharacteristics(text) {
+  debugLog('🔍 Starting character-based language detection');
+  debugLog('📝 Sample text (first 200 chars):', text.substring(0, 200) + (text.length > 200 ? '...' : ''));
+  
   // Clean text for better detection
   const cleanText = text.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
-  if (cleanText.length < 10) return null; // Too short to detect reliably
+  debugLog('🧹 Cleaned text length:', cleanText.length, 'characters');
+  
+  if (cleanText.length < 10) {
+    debugLog('❌ Text too short for reliable detection (<10 chars)');
+    return null;
+  }
   
   // Character-based detection
   const chineseRegex = /[\u4e00-\u9fff]/g;
@@ -53,8 +61,20 @@ function detectLanguageByCharacteristics(text) {
   
   const totalChars = cleanText.length;
   
+  debugLog('📊 Character analysis:', {
+    totalChars,
+    chinese: `${chineseCount} (${(chineseCount/totalChars*100).toFixed(1)}%)`,
+    japaneseKana: `${japaneseCount} (${(japaneseCount/totalChars*100).toFixed(1)}%)`,
+    korean: `${koreanCount} (${(koreanCount/totalChars*100).toFixed(1)}%)`,
+    arabic: `${arabicCount} (${(arabicCount/totalChars*100).toFixed(1)}%)`,
+    thai: `${thaiCount} (${(thaiCount/totalChars*100).toFixed(1)}%)`,
+    russian: `${russianCount} (${(russianCount/totalChars*100).toFixed(1)}%)`
+  });
+  
   // If significant portion is Chinese characters
   if (chineseCount / totalChars > 0.2) { // Lower threshold for mixed content
+    debugLog('🈶 Chinese detected (>20%), analyzing Traditional vs Simplified...');
+    
     // Enhanced Traditional/Simplified Chinese detection
     const traditionalIndicators = /[繁體複雜學習開關們這樣時間問題說話語言國家經濟發展變化]/g;
     const simplifiedIndicators = /[简体复杂学习开关们这样时间问题说话语言国家经济发展变化]/g;
@@ -68,12 +88,23 @@ function detectLanguageByCharacteristics(text) {
     const traditionalOnlyCount = (text.match(traditionalOnlyChars) || []).length;
     const simplifiedOnlyCount = (text.match(simplifiedOnlyChars) || []).length;
     
+    debugLog('📝 Chinese variant analysis:', {
+      traditionalIndicators: traditionalCount,
+      simplifiedIndicators: simplifiedCount,
+      traditionalOnlyChars: traditionalOnlyCount,
+      simplifiedOnlyChars: simplifiedOnlyCount,
+      traditionalRatio: traditionalCount / (traditionalCount + simplifiedCount || 1),
+      simplifiedRatio: simplifiedCount / (traditionalCount + simplifiedCount || 1)
+    });
+    
     // Strong indicators for simplified
     if (simplifiedOnlyCount > 0 || (simplifiedCount > traditionalCount * 1.5)) {
+      debugLog('✅ Detected as zh-CN (Simplified Chinese) - Strong simplified indicators');
       return 'zh-CN';
     }
     // Strong indicators for traditional
     else if (traditionalOnlyCount > 0 || (traditionalCount > simplifiedCount * 1.5)) {
+      debugLog('✅ Detected as zh-TW (Traditional Chinese) - Strong traditional indicators');
       return 'zh-TW';
     }
     
@@ -84,29 +115,61 @@ function detectLanguageByCharacteristics(text) {
                                 hostname.includes('.tw') || hostname.includes('.hk');
     const isSimplifiedContext = htmlLang.includes('cn') || hostname.includes('.cn');
     
-    if (isSimplifiedContext) return 'zh-CN';
-    if (isTraditionalContext) return 'zh-TW';
+    debugLog('🌐 Context analysis:', {
+      htmlLang,
+      hostname,
+      isTraditionalContext,
+      isSimplifiedContext
+    });
+    
+    if (isSimplifiedContext) {
+      debugLog('✅ Detected as zh-CN (Simplified Chinese) - Context indicators (.cn domain or lang=zh-cn)');
+      return 'zh-CN';
+    }
+    if (isTraditionalContext) {
+      debugLog('✅ Detected as zh-TW (Traditional Chinese) - Context indicators (.tw/.hk domain or lang=zh-tw)');
+      return 'zh-TW';
+    }
     
     // Default based on common patterns
-    return traditionalCount >= simplifiedCount ? 'zh-TW' : 'zh-CN';
+    const result = traditionalCount >= simplifiedCount ? 'zh-TW' : 'zh-CN';
+    debugLog(`✅ Detected as ${result} - Based on character frequency (traditional:${traditionalCount} vs simplified:${simplifiedCount})`);
+    return result;
   }
   
   // Japanese detection - prioritize kana presence over percentage
   if (japaneseCount > 0) {
+    debugLog('🈷️ Japanese kana characters found, checking threshold...');
     // If there are Japanese kana characters, it's likely Japanese
     // even with a lower percentage due to kanji overlap with Chinese
     if (japaneseCount / totalChars > 0.05 || japaneseCount > 10) {
+      debugLog(`✅ Detected as ja (Japanese) - Kana chars: ${japaneseCount} (${(japaneseCount/totalChars*100).toFixed(1)}%) or >10 absolute count`);
       return 'ja';
+    } else {
+      debugLog(`❌ Japanese kana found but insufficient: ${japaneseCount} chars (${(japaneseCount/totalChars*100).toFixed(1)}%) - need >5% or >10 chars`);
     }
   }
   
   // Lower thresholds for other character-based languages
-  if (koreanCount / totalChars > 0.2) return 'ko';
-  if (arabicCount / totalChars > 0.2) return 'ar';
-  if (thaiCount / totalChars > 0.2) return 'th';
-  if (russianCount / totalChars > 0.2) return 'ru';
+  if (koreanCount / totalChars > 0.2) {
+    debugLog(`✅ Detected as ko (Korean) - ${koreanCount} chars (${(koreanCount/totalChars*100).toFixed(1)}% > 20% threshold)`);
+    return 'ko';
+  }
+  if (arabicCount / totalChars > 0.2) {
+    debugLog(`✅ Detected as ar (Arabic) - ${arabicCount} chars (${(arabicCount/totalChars*100).toFixed(1)}% > 20% threshold)`);
+    return 'ar';
+  }
+  if (thaiCount / totalChars > 0.2) {
+    debugLog(`✅ Detected as th (Thai) - ${thaiCount} chars (${(thaiCount/totalChars*100).toFixed(1)}% > 20% threshold)`);
+    return 'th';
+  }
+  if (russianCount / totalChars > 0.2) {
+    debugLog(`✅ Detected as ru (Russian) - ${russianCount} chars (${(russianCount/totalChars*100).toFixed(1)}% > 20% threshold)`);
+    return 'ru';
+  }
   
   // Enhanced European language detection with scoring
+  debugLog('🇪🇺 Checking European languages with word pattern matching...');
   const lowerText = cleanText.toLowerCase();
   
   const languagePatterns = {
@@ -130,14 +193,22 @@ function detectLanguageByCharacteristics(text) {
   
   let maxScore = 0;
   let detectedLang = null;
+  const languageScores = {};
   
   // Calculate scores for each language
   for (const [lang, patterns] of Object.entries(languagePatterns)) {
     let score = 0;
+    const matchDetails = [];
+    
     for (const pattern of patterns) {
       const matches = lowerText.match(pattern) || [];
       score += matches.length;
+      if (matches.length > 0) {
+        matchDetails.push(`${matches.length} matches for pattern`);
+      }
     }
+    
+    languageScores[lang] = { score, matches: matchDetails };
     
     if (score > maxScore && score >= 3) { // Minimum 3 matches required
       maxScore = score;
@@ -145,39 +216,73 @@ function detectLanguageByCharacteristics(text) {
     }
   }
   
+  debugLog('📊 European language scoring:', languageScores);
+  
   // Return detected language or null if no strong match
-  return detectedLang;
+  if (detectedLang) {
+    debugLog(`✅ Detected as ${detectedLang} (${detectedLang === 'es' ? 'Spanish' : detectedLang === 'fr' ? 'French' : detectedLang === 'de' ? 'German' : 'English'}) - Score: ${maxScore} matches`);
+    return detectedLang;
+  } else {
+    debugLog('❌ No European language detected - insufficient word pattern matches (<3)');
+    return null;
+  }
 }
 
 async function detectLanguageWithBrowser(text) {
+  debugLog('🌐 Attempting browser-based language detection...');
+  debugLog('📝 Browser detection sample (first 100 chars):', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
+  
   // Try browser's built-in language detection if available
   if ('detectLanguage' in chrome.i18n) {
     try {
       const detectedLang = await chrome.i18n.detectLanguage(text);
+      debugLog('🔍 Browser detection raw result:', detectedLang);
+      
       if (detectedLang && detectedLang.languages && detectedLang.languages.length > 0) {
+        debugLog('📋 All detected languages:', detectedLang.languages.map(lang => 
+          `${lang.language}: ${lang.percentage}%`
+        ));
+        
         const mostLikely = detectedLang.languages[0];
         if (mostLikely.percentage > 70) { // Only trust high confidence results
+          debugLog(`✅ Browser detected ${mostLikely.language} with ${mostLikely.percentage}% confidence (>70% threshold)`);
           return mostLikely.language;
+        } else {
+          debugLog(`❌ Browser detection confidence too low: ${mostLikely.language} at ${mostLikely.percentage}% (need >70%)`);
         }
+      } else {
+        debugLog('❌ Browser detection returned no results');
       }
     } catch (error) {
-      debugLog('Browser language detection failed:', error);
+      debugLog('❌ Browser language detection failed:', error);
     }
+  } else {
+    debugLog('❌ Browser language detection API not available');
   }
+  
+  debugLog('🔄 Falling back to character-based detection...');
   return null;
 }
 
 async function detectLanguage(text) {
+  debugLog('🚀 Starting comprehensive language detection process');
+  debugLog('📏 Input text length:', text.length, 'characters');
+  
   // First try browser detection
   const browserDetection = await detectLanguageWithBrowser(text);
   if (browserDetection) {
-    debugLog('Browser detected language:', browserDetection);
+    debugLog(`🎯 Final result: ${browserDetection} (Browser detection)`);
     return browserDetection;
   }
   
   // Fallback to character-based detection
   const characterDetection = detectLanguageByCharacteristics(text);
-  debugLog('Character-based detection:', characterDetection);
+  if (characterDetection) {
+    debugLog(`🎯 Final result: ${characterDetection} (Character-based detection)`);
+  } else {
+    debugLog('🎯 Final result: null (No language detected)');
+  }
+  
   return characterDetection;
 }
 
@@ -713,9 +818,12 @@ async function translatePage() {
     debugLog('Language detection enabled, checking content...');
     
     // Enhanced sampling strategy for better language detection
+    debugLog('📊 Starting text sampling for language detection...');
     const sampleTexts = [];
     const maxSamples = 10;
     const minTextLength = 20;
+    
+    debugLog(`🔍 Analyzing ${elements.length} translatable elements for sampling`);
     
     // Take diverse samples from different parts of the page
     for (let i = 0; i < Math.min(elements.length, maxSamples); i++) {
@@ -723,12 +831,22 @@ async function translatePage() {
       const text = elements[index]?.textContent?.trim();
       if (text && text.length > minTextLength) {
         sampleTexts.push(text);
+        debugLog(`📝 Sample ${i + 1}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
+      } else {
+        debugLog(`❌ Sample ${i + 1}: Skipped - too short or empty (${text?.length || 0} chars)`);
       }
     }
     
+    debugLog(`✅ Collected ${sampleTexts.length} valid samples out of ${Math.min(elements.length, maxSamples)} attempts`);
+    
     if (sampleTexts.length > 0) {
       // Take more text for better detection, but limit total size
-      const sampleText = sampleTexts.join(' ').substring(0, 2000);
+      const combinedText = sampleTexts.join(' ');
+      const sampleText = combinedText.substring(0, 2000);
+      
+      debugLog(`🔤 Combined sample text: ${combinedText.length} chars → trimmed to ${sampleText.length} chars`);
+      debugLog(`📋 Final sample for detection: "${sampleText.substring(0, 100)}${sampleText.length > 100 ? '...' : ''}"`);
+      
       const detectedLanguage = await detectLanguage(sampleText);
       
       debugLog('Detected language:', detectedLanguage, 'Target language:', targetLanguage);
@@ -1818,9 +1936,14 @@ async function checkAndAutoTranslate() {
     
     // 如果啟用語言檢測，先檢查是否需要翻譯
     if (apiConfig.enableLanguageDetection !== false) {
+      debugLog('🔍 Auto-translate: Language detection enabled, checking content...');
+      debugLog('📊 Auto-translate: Starting text sampling...');
+      
       const sampleTexts = [];
       const maxSamples = 10;
       const minTextLength = 20;
+      
+      debugLog(`🔍 Auto-translate: Analyzing ${elements.length} elements for sampling`);
       
       // Take diverse samples from different parts of the page
       for (let i = 0; i < Math.min(elements.length, maxSamples); i++) {
@@ -1828,15 +1951,22 @@ async function checkAndAutoTranslate() {
         const text = elements[index]?.textContent?.trim();
         if (text && text.length > minTextLength) {
           sampleTexts.push(text);
+          debugLog(`📝 Auto-translate Sample ${i + 1}: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}" (${text.length} chars)`);
         }
       }
       
+      debugLog(`✅ Auto-translate: Collected ${sampleTexts.length} valid samples`);
+      
       if (sampleTexts.length > 0) {
-        const sampleText = sampleTexts.join(' ').substring(0, 2000);
+        const combinedText = sampleTexts.join(' ');
+        const sampleText = combinedText.substring(0, 2000);
+        
+        debugLog(`🔤 Auto-translate: Combined text ${combinedText.length} → ${sampleText.length} chars`);
+        
         const detectedLanguage = await detectLanguage(sampleText);
         
         if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
-          debugLog('Auto-translate skipped: content is already in target language', detectedLanguage);
+          debugLog('⏭️ Auto-translate skipped: content is already in target language', detectedLanguage);
           return;
         }
       }
