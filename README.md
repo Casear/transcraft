@@ -5,6 +5,7 @@ Professional Chrome extension that provides intelligent webpage translation usin
 ## ✨ Key Features
 
 - 🌐 **Real-time Webpage Translation** - Translate entire webpages while preserving original formatting
+- 🎬 **Advanced YouTube Subtitle Translation** - Three translation modes: Real-time, Batch, and Preload with subtitle file extraction
 - 🤖 **Multi-AI Service Support** - Choose from OpenAI, Claude, Gemini, OpenRouter, or Ollama (local)
 - 🎯 **Expert Translation Modes** - Specialized modes for novels, technical docs, academic papers, and more
 - 🚀 **Intelligent Batch Processing** - Configurable batching for optimal performance and cost
@@ -48,12 +49,75 @@ Professional Chrome extension that provides intelligent webpage translation usin
 - Choose target language and translation mode
 - Click "Translate This Page"
 
+**Method C: YouTube Subtitle Translation**
+- Visit any YouTube video with subtitles
+- Click the translate button in YouTube's control bar (left of settings)
+- Choose translation mode via right-click menu or extension settings:
+  - **Real-time**: Instant per-sentence translation
+  - **Batch**: Accumulate multiple sentences for better context
+  - **Preload**: Download and translate entire subtitle file before playback
+- Translated subtitles appear as overlay below video
+- Configure settings via Extension Settings → YouTube Subtitle Translation
+
 ### 3. Expert Translation Modes
 - **General**: Standard high-quality translation
 - **Novel Modes**: Literature-focused (Romance, Fantasy, Mystery, Sci-Fi, Historical)
 - **Technical**: Precise technical documentation translation
 - **Academic**: Scholarly works with formal tone
 - **Business**: Professional communications
+
+## 🎬 YouTube Translation Modes
+
+TransCraft offers three advanced translation modes for YouTube videos, each optimized for different use cases:
+
+### 🚀 Real-time Translation Mode
+- **Best for**: Live streaming, interactive content, immediate feedback needed
+- **How it works**: Translates each subtitle sentence as it appears
+- **Pros**: 
+  - Fastest response time
+  - No waiting period
+  - Works with any video length
+- **Cons**: 
+  - Higher API costs (one request per sentence)
+  - Limited context for translation
+- **Perfect for**: Live streams, breaking news, interactive tutorials
+
+### 📦 Batch Translation Mode  
+- **Best for**: Regular videos, cost optimization, better translation quality
+- **How it works**: Accumulates 3-5 sentences or waits 5 seconds, then translates together
+- **Pros**:
+  - Lower API costs (multiple sentences per request)
+  - Better context and coherence
+  - More natural translations
+- **Cons**:
+  - 2-5 second delay for translation
+  - Temporary placeholder text shown
+- **Perfect for**: Educational videos, documentaries, standard YouTube content
+
+### 📁 Preload Translation Mode
+- **Best for**: Long-form content, maximum quality, offline viewing
+- **How it works**: Downloads entire subtitle file and translates everything before playback
+- **Pros**:
+  - Highest translation quality (full context)
+  - Lowest API costs (bulk processing)
+  - Zero delay during playback
+  - Works with poor internet connectivity
+- **Cons**:
+  - 30-60 second wait time before starting
+  - Requires subtitles to be available
+  - Only works with videos that have subtitle files
+- **Perfect for**: Movies, long lectures, detailed technical content
+
+### 🎛️ Mode Selection
+- **Settings Page**: Choose default mode in Extension Settings → YouTube Subtitle Translation
+- **Quick Switch**: Right-click the YouTube translate button for instant mode switching
+- **Auto-fallback**: Preload mode automatically falls back to real-time if subtitle extraction fails
+
+### 📊 Usage Statistics
+Each mode shows live statistics in the right-click menu:
+- Translation cache size
+- Preloaded subtitle count  
+- Current processing status
 
 ## 🔧 Advanced Configuration
 

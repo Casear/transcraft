@@ -1,0 +1,239 @@
+/* YouTube字幕翻譯覆蓋層樣式 */
+.youtube-subtitle-overlay {
+    position: absolute !important;
+    z-index: 9999 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    bottom: 80px !important;
+    max-width: 85% !important;
+    background: rgba(0, 0, 0, 0.85) !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    font-family: Arial, "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif !important;
+    line-height: 1.4 !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    text-align: center !important;
+    word-wrap: break-word !important;
+    white-space: pre-line !important;
+    display: none !important;
+    pointer-events: none !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* 確保在全螢幕模式下也能正常顯示 */
+.ytp-fullscreen .youtube-subtitle-overlay {
+    bottom: 100px !important;
+    font-size: 24px !important;
+    padding: 12px 20px !important;
+}
+
+/* 劇院模式調整 */
+.ytp-player-minimized .youtube-subtitle-overlay {
+    bottom: 60px !important;
+    font-size: 16px !important;
+}
+
+/* 手機版調整 */
+@media (max-width: 768px) {
+    .youtube-subtitle-overlay {
+        max-width: 90% !important;
+        font-size: 16px !important;
+        padding: 6px 12px !important;
+        bottom: 60px !important;
+        border-radius: 4px !important;
+    }
+    
+    .ytp-fullscreen .youtube-subtitle-overlay {
+        font-size: 20px !important;
+        bottom: 80px !important;
+    }
+}
+
+/* 小螢幕調整 */
+@media (max-width: 480px) {
+    .youtube-subtitle-overlay {
+        max-width: 95% !important;
+        font-size: 14px !important;
+        padding: 4px 8px !important;
+        bottom: 50px !important;
+    }
+    
+    .ytp-fullscreen .youtube-subtitle-overlay {
+        font-size: 18px !important;
+        bottom: 70px !important;
+    }
+}
+
+/* 隱藏原生字幕的選項（如果用戶選擇） */
+.hide-original-subtitles .ytp-caption-segment {
+    opacity: 0 !important;
+    transform: translateY(-1000px) !important;
+    pointer-events: none !important;
+}
+
+/* 載入動畫 */
+@keyframes subtitleFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+@keyframes subtitleFadeOut {
+    from {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+}
+
+/* 字幕出現動畫 */
+.youtube-subtitle-overlay.fade-in {
+    animation: subtitleFadeIn 0.3s ease forwards !important;
+}
+
+.youtube-subtitle-overlay.fade-out {
+    animation: subtitleFadeOut 0.3s ease forwards !important;
+}
+
+/* 確保不會被其他元素遮擋 */
+.youtube-subtitle-overlay {
+    isolation: isolate !important;
+}
+
+/* 高對比度主題支援 */
+@media (prefers-contrast: high) {
+    .youtube-subtitle-overlay {
+        background: rgba(0, 0, 0, 0.95) !important;
+        border: 2px solid #ffffff !important;
+        box-shadow: none !important;
+    }
+}
+
+/* 減少動畫模式支援 */
+@media (prefers-reduced-motion: reduce) {
+    .youtube-subtitle-overlay {
+        transition: opacity 0.1s linear !important;
+    }
+    
+    .youtube-subtitle-overlay.fade-in,
+    .youtube-subtitle-overlay.fade-out {
+        animation: none !important;
+    }
+}
+
+/* 暗色主題調整 */
+@media (prefers-color-scheme: dark) {
+    .youtube-subtitle-overlay {
+        background: rgba(18, 18, 18, 0.9) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+}
+
+/* 確保字體渲染清晰 */
+.youtube-subtitle-overlay {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
+}
+
+/* 防止與YouTube UI衝突 */
+#movie_player .youtube-subtitle-overlay {
+    position: absolute !important;
+}
+
+.html5-video-player .youtube-subtitle-overlay {
+    position: absolute !important;
+}
+
+/* 確保在迷你播放器中也能正常顯示 */
+.ytp-miniplayer .youtube-subtitle-overlay {
+    bottom: 40px !important;
+    font-size: 12px !important;
+    padding: 3px 6px !important;
+    max-width: 90% !important;
+}
+
+/* YouTube 翻譯切換按鈕樣式 */
+.youtube-translate-toggle {
+    border-radius: 2px !important;
+    margin: 0 6px 0 0 !important;
+}
+
+.youtube-translate-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.youtube-translate-toggle.active {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.youtube-translate-toggle svg {
+    transition: all 0.2s ease !important;
+}
+
+.youtube-translate-toggle:hover svg {
+    transform: scale(1.1) !important;
+}
+
+/* 確保按鈕與 YouTube 原生控制項一致 */
+.youtube-translate-toggle {
+    box-sizing: border-box !important;
+}
+
+/* 全螢幕模式下的按鈕調整 */
+.ytp-fullscreen .youtube-translate-toggle {
+    width: 52px !important;
+    height: 52px !important;
+}
+
+.ytp-fullscreen .youtube-translate-toggle svg {
+    width: 28px !important;
+    height: 28px !important;
+}
+
+/* 劇院模式調整 */
+.ytp-large-width-mode .youtube-translate-toggle svg {
+    width: 26px !important;
+    height: 26px !important;
+}
+
+/* 小螢幕調整 */
+@media (max-width: 768px) {
+    .youtube-translate-toggle {
+        width: 44px !important;
+        height: 44px !important;
+        margin: 0 4px 0 0 !important;
+    }
+    
+    .youtube-translate-toggle svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+}
+
+/* 超小螢幕調整 */
+@media (max-width: 480px) {
+    .youtube-translate-toggle {
+        width: 40px !important;
+        height: 40px !important;
+        margin: 0 2px 0 0 !important;
+    }
+    
+    .youtube-translate-toggle svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+}

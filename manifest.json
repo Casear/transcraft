@@ -31,6 +31,12 @@
       "matches": ["<all_urls>"],
       "js": ["js/content.js"],
       "css": ["css/content.css"]
+    },
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["js/youtube-subtitle.js"],
+      "css": ["css/youtube-subtitle.css"],
+      "run_at": "document_end"
     }
   ],
   "options_page": "options.html",

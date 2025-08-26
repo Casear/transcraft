@@ -854,6 +854,12 @@ function updateLanguageButtonText() {
 
 // 初始化浮動按鈕
 function initializeFloatingButton() {
+  // 檢查是否在YouTube頁面，如果是則不顯示浮動按鈕（使用專門的YouTube字幕翻譯）
+  if (window.location.hostname === 'www.youtube.com' && window.location.pathname === '/watch') {
+    console.log('YouTube video detected, floating button disabled');
+    return;
+  }
+
   // 等待頁面完全載入
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', createFloatingButton);

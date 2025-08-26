@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Chrome Extension (Manifest v3) that provides AI-powered webpage translation using five AI services including local AI.
+This is a Chrome Extension (Manifest v3) that provides AI-powered webpage translation using five AI services including local AI, with advanced YouTube subtitle translation featuring three distinct translation modes.
 
 ### Core Architecture Components
 
@@ -40,6 +40,15 @@ This is a Chrome Extension (Manifest v3) that provides AI-powered webpage transl
 - Supports 55+ AI models across all five services
 - Model categorization (fast/balanced/powerful)
 - API key management with visibility toggles
+- YouTube translation mode selection and configuration
+
+**YouTube Subtitle Translator (`js/youtube-subtitle.js`)**
+- Dedicated content script for YouTube video pages
+- Three translation modes: Real-time, Batch, and Preload
+- Automatic subtitle track detection and extraction from YouTube's internal data
+- XML subtitle file parsing and processing
+- Custom overlay system with YouTube UI integration
+- Right-click context menu for quick mode switching
 
 ### Key Technical Patterns
 
@@ -49,6 +58,19 @@ This is a Chrome Extension (Manifest v3) that provides AI-powered webpage transl
 3. Combines text using `<<TRANSLATE_SEPARATOR>>` delimiter
 4. Background worker calls selected AI service API
 5. Content script displays translations below original text
+
+**YouTube Translation Flow:**
+1. **Real-time Mode**: MutationObserver monitors `.ytp-caption-segment` changes → translates immediately
+2. **Batch Mode**: Accumulates subtitles in buffer → processes every 5 seconds or 5 items → splits results
+3. **Preload Mode**: Extracts `captionTracks` from page scripts → downloads XML subtitle file → batch translates all subtitles → caches results
+
+**YouTube Subtitle Extraction:**
+```javascript
+// Extract from YouTube's internal data structure
+const matches = content.match(/"captionTracks":\s*(\[.*?\])/);
+const captionTracks = JSON.parse(matches[1]);
+const subtitleUrl = selectedTrack.baseUrl;
+```
 
 **Error Classification:**
 - `QUOTA_EXCEEDED`: API billing/quota issues
@@ -72,7 +94,15 @@ Chrome Storage Sync stores:
   selectedModel: 'model_identifier',
   targetLanguage: 'zh-TW'|'en'|'ja'|etc,
   maxBatchLength: 8000,    // Default: 8000 characters per batch
-  maxBatchElements: 20     // Default: 20 elements per batch
+  maxBatchElements: 20,    // Default: 20 elements per batch
+  
+  // YouTube-specific settings
+  youtubeSubtitleEnabled: boolean,
+  youtubeTranslationMode: 'realtime'|'batch'|'preload',
+  hideOriginalSubtitles: boolean,
+  subtitleFontSize: '14px'|'16px'|'18px'|'20px'|'24px',
+  subtitlePosition: 'bottom'|'top',
+  subtitleBackgroundOpacity: '0.6'|'0.8'|'0.9'|'1.0'
 }
 ```
 
@@ -113,6 +143,12 @@ Required permissions in manifest.json:
 - Model badge system (fast/balanced/powerful)
 - Animated transitions for section changes
 
+**YouTube Styles (`css/youtube-subtitle.css`):**
+- `.youtube-subtitle-overlay`: Custom subtitle overlay with backdrop-filter
+- `.youtube-translate-toggle`: YouTube toolbar integration button
+- Responsive design for fullscreen, theater, and mobile modes
+- Progress indicator animations for preload mode
+
 ## Important Implementation Notes
 
 - All text processing is block-level to avoid incomplete translations
@@ -139,3 +175,45 @@ The extension now uses intelligent batch processing that considers both text len
 3. Progress is tracked accurately based on processed elements
 4. Smaller batches provide better stability for complex content
 5. Larger batches provide faster translation for simple content
+
+## YouTube Subtitle Translation Details
+
+The extension implements three distinct translation modes for YouTube videos:
+
+**Architecture Components:**
+- `YouTubeSubtitleTranslator` class handles all YouTube-specific functionality
+- Separate content script injection for YouTube pages only
+- MutationObserver monitors subtitle DOM changes in real-time
+- Custom overlay system that integrates with YouTube's player UI
+
+**Translation Mode Implementation:**
+
+1. **Real-time Mode**:
+   - Monitors `.ytp-caption-segment` elements via MutationObserver
+   - Translates each subtitle segment immediately upon detection
+   - Uses existing translation cache to avoid duplicate API calls
+   - Displays translated text with loading indicator during processing
+
+2. **Batch Mode**:
+   - Accumulates subtitles in internal buffer (`batchBuffer` array)
+   - Triggers batch processing when buffer reaches 5 items or 5-second timer expires
+   - Combines multiple subtitles using `<<SUBTITLE_SEPARATOR>>` delimiter
+   - Splits API response and caches individual translations
+   - Shows placeholder text "[批次翻譯中...]" during processing
+
+3. **Preload Mode**:
+   - Extracts subtitle track information from YouTube's page scripts
+   - Downloads complete XML subtitle file via fetch API
+   - Parses XML to extract timestamps and text content
+   - Processes subtitles in batches of 20 for optimal API usage
+   - Caches all translations before video playback begins
+   - Provides progress indicator with real-time status updates
+
+**Key Technical Features:**
+- Subtitle track auto-detection from `captionTracks` JSON in page scripts
+- XML parsing for timestamp-accurate subtitle extraction
+- Intelligent fallback: Preload → Real-time if extraction fails
+- Right-click context menu for instant mode switching
+- Persistent mode preferences via Chrome Storage API
+- Custom progress overlay with backdrop-filter effects
+- Integration with YouTube's native control bar styling

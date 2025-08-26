@@ -10,6 +10,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     const maxBatchLengthInput = document.getElementById('max-batch-length');
     const maxBatchElementsInput = document.getElementById('max-batch-elements');
     
+    // YouTube subtitle settings elements
+    const youtubeSubtitleEnabled = document.getElementById('youtube-subtitle-enabled');
+    const youtubeSettings = document.getElementById('youtube-settings');
+    const youtubeTranslationMode = document.getElementById('youtube-translation-mode');
+    const hideOriginalSubtitles = document.getElementById('hide-original-subtitles');
+    const subtitleFontSize = document.getElementById('subtitle-font-size');
+    const subtitlePosition = document.getElementById('subtitle-position');
+    const subtitleBackgroundOpacity = document.getElementById('subtitle-background-opacity');
+    
     // Expert modes management elements
     const expertModesList = document.getElementById('expert-modes-list');
     const addExpertModeButton = document.getElementById('add-expert-mode-button');
@@ -154,7 +163,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             'targetLanguage',
             'selectedModel',
             'maxBatchLength',
-            'maxBatchElements'
+            'maxBatchElements',
+            'youtubeSubtitleEnabled',
+            'youtubeTranslationMode',
+            'hideOriginalSubtitles',
+            'subtitleFontSize',
+            'subtitlePosition',
+            'subtitleBackgroundOpacity'
         ]);
 
         if (settings.selectedApi) {
@@ -185,6 +200,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Load batch settings
         maxBatchLengthInput.value = settings.maxBatchLength || 8000;
         maxBatchElementsInput.value = settings.maxBatchElements || 20;
+        
+        // Load YouTube subtitle settings
+        youtubeSubtitleEnabled.checked = settings.youtubeSubtitleEnabled || false;
+        youtubeTranslationMode.value = settings.youtubeTranslationMode || 'realtime';
+        hideOriginalSubtitles.checked = settings.hideOriginalSubtitles || false;
+        subtitleFontSize.value = settings.subtitleFontSize || '18px';
+        subtitlePosition.value = settings.subtitlePosition || 'bottom';
+        subtitleBackgroundOpacity.value = settings.subtitleBackgroundOpacity || '0.8';
+        
+        // Show/hide YouTube settings based on enabled state
+        toggleYouTubeSettings();
     }
 
     function updateModelOptions(selectedApi) {
@@ -346,7 +372,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             targetLanguage: targetLanguageSelect.value,
             selectedModel: modelSelect.value,
             maxBatchLength: maxBatchLength,
-            maxBatchElements: maxBatchElements
+            maxBatchElements: maxBatchElements,
+            youtubeSubtitleEnabled: youtubeSubtitleEnabled.checked,
+            youtubeTranslationMode: youtubeTranslationMode.value,
+            hideOriginalSubtitles: hideOriginalSubtitles.checked,
+            subtitleFontSize: subtitleFontSize.value,
+            subtitlePosition: subtitlePosition.value,
+            subtitleBackgroundOpacity: subtitleBackgroundOpacity.value
         });
 
         showStatus('設定已儲存', 'success');
@@ -571,6 +603,17 @@ document.addEventListener('DOMContentLoaded', async function() {
             closeModal();
         }
     });
+    
+    // YouTube settings management
+    function toggleYouTubeSettings() {
+        if (youtubeSubtitleEnabled.checked) {
+            youtubeSettings.style.display = 'block';
+        } else {
+            youtubeSettings.style.display = 'none';
+        }
+    }
+    
+    youtubeSubtitleEnabled.addEventListener('change', toggleYouTubeSettings);
     
     await loadSettings();
     await loadExpertModes();
