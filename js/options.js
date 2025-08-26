@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Language detection elements
     const languageDetectionCheckbox = document.getElementById('language-detection-checkbox');
+    const languageDetectionChars = document.getElementById('language-detection-chars');
     
     // Expert modes management elements
     const expertModesList = document.getElementById('expert-modes-list');
@@ -273,7 +274,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             'maxBatchElements',
             'requestTimeout',
             'debugMode',
-            'enableLanguageDetection'
+            'enableLanguageDetection',
+            'languageDetectionChars'
         ]);
 
         if (settings.selectedApi) {
@@ -342,6 +344,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Load language detection setting
         languageDetectionCheckbox.checked = settings.enableLanguageDetection !== false;
+        languageDetectionChars.value = settings.languageDetectionChars || 600;
     }
 
     function updateModelOptions(selectedApi) {
@@ -619,7 +622,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             maxBatchElements: maxBatchElements,
             requestTimeout: requestTimeout,
             debugMode: debugModeCheckbox.checked,
-            enableLanguageDetection: languageDetectionCheckbox.checked
+            enableLanguageDetection: languageDetectionCheckbox.checked,
+            languageDetectionChars: parseInt(languageDetectionChars.value) || 600
         });
 
         showStatus('設定已儲存', 'success');

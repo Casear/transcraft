@@ -271,6 +271,15 @@ async function detectLanguage(text) {
   // First try browser detection
   const browserDetection = await detectLanguageWithBrowser(text);
   if (browserDetection) {
+    // If browser detected generic 'zh', use character analysis to determine variant
+    if (browserDetection === 'zh') {
+      debugLog('🔍 Browser detected generic Chinese, analyzing variant...');
+      const characterDetection = detectLanguageByCharacteristics(text);
+      if (characterDetection && characterDetection.startsWith('zh-')) {
+        debugLog(`🎯 Final result: ${characterDetection} (Browser + Character analysis)`);
+        return characterDetection;
+      }
+    }
     debugLog(`🎯 Final result: ${browserDetection} (Browser detection)`);
     return browserDetection;
   }
@@ -789,7 +798,7 @@ async function translateText(text, apiConfig, timeoutMs = 60000) {
   }
 }
 
-async function translatePage() {
+async function translatePage(forceTranslation = false) {
   if (isTranslating) return;
   
   // 確保語言菜單已關閉
@@ -814,7 +823,7 @@ async function translatePage() {
 
   // Language detection before translation
   let skipCount = 0;
-  if (apiConfig.enableLanguageDetection !== false) { // Enabled by default
+  if (apiConfig.enableLanguageDetection !== false && !forceTranslation) { // Enabled by default and not force translation
     debugLog('Language detection enabled, checking content...');
     
     // Enhanced sampling strategy for better language detection
@@ -842,7 +851,9 @@ async function translatePage() {
     if (sampleTexts.length > 0) {
       // Take more text for better detection, but limit total size
       const combinedText = sampleTexts.join(' ');
-      const sampleText = combinedText.substring(0, 2000);
+      const settings = await chrome.storage.sync.get(['languageDetectionChars']);
+      const detectionChars = settings.languageDetectionChars || 600;
+      const sampleText = combinedText.substring(0, detectionChars);
       
       debugLog(`🔤 Combined sample text: ${combinedText.length} chars → trimmed to ${sampleText.length} chars`);
       debugLog(`📋 Final sample for detection: "${sampleText.substring(0, 100)}${sampleText.length > 100 ? '...' : ''}"`);
@@ -850,6 +861,9 @@ async function translatePage() {
       const detectedLanguage = await detectLanguage(sampleText);
       
       debugLog('Detected language:', detectedLanguage, 'Target language:', targetLanguage);
+      
+      // Display detected language
+      displayDetectedLanguage(detectedLanguage);
       
       if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
         const langNames = {
@@ -866,11 +880,7 @@ async function translatePage() {
         const sourceLangName = langNames[detectedLanguage] || detectedLanguage;
         const targetLangName = langNames[targetLanguage] || targetLanguage;
         
-        showErrorModal(
-          getLocalizedMessage('translation_skipped', '翻譯已跳過'),
-          `${getLocalizedMessage('content_already_in_target_language', '內容已經是目標語言')}: ${targetLangName}<br>${getLocalizedMessage('detected_language', '檢測到的語言')}: ${sourceLangName}`,
-          3000
-        );
+        showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage);
         return;
       }
     }
@@ -1391,6 +1401,9 @@ function restoreOriginalText() {
     
     console.log(`Removed all translations. Remaining elements: ${document.querySelectorAll('.ai-translation-block').length}`);
     
+    // Hide detected language when restoring
+    displayDetectedLanguage(null);
+    
   } catch (error) {
     console.error('Error during translation restoration:', error);
     
@@ -1474,6 +1487,75 @@ function showTranslationErrorSummary(errors, successCount, totalCount) {
   showErrorModal(title, message, autoCloseMs);
 }
 
+// 顯示相同語言模態視窗
+function showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage) {
+  // 移除現有的模態視窗
+  const existingModal = document.getElementById('ai-translation-same-language-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'ai-translation-same-language-modal';
+  modal.innerHTML = `
+    <div class="same-language-modal-overlay">
+      <div class="same-language-modal-content">
+        <div class="same-language-modal-header">
+          <div class="same-language-icon">🌐</div>
+          <h3 class="same-language-title">語言相同，不需要翻譯</h3>
+        </div>
+        <div class="same-language-modal-body">
+          <p class="same-language-message">
+            <strong>檢測到的語言：</strong>${sourceLangName}<br>
+            <strong>目標語言：</strong>${targetLangName}<br><br>
+            內容已經是您選擇的目標語言，通常不需要翻譯。
+          </p>
+        </div>
+        <div class="same-language-modal-footer">
+          <button class="same-language-close-btn">關閉</button>
+          <button class="same-language-force-btn">仍要強制翻譯</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // 添加動畫類
+  setTimeout(() => {
+    modal.classList.add('show');
+  }, 10);
+
+  // 關閉按鈕功能
+  const closeBtn = modal.querySelector('.same-language-close-btn');
+  const overlay = modal.querySelector('.same-language-modal-overlay');
+  const forceBtn = modal.querySelector('.same-language-force-btn');
+
+  const closeModal = () => {
+    modal.classList.remove('show');
+    setTimeout(() => {
+      modal.remove();
+    }, 300);
+  };
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      closeModal();
+    }
+  });
+
+  // 強制翻譯按鈕功能
+  forceBtn.addEventListener('click', () => {
+    closeModal();
+    // 強制翻譯，跳過語言檢測
+    translatePage(true);
+  });
+
+  // 自動關閉
+  setTimeout(closeModal, 10000);
+}
+
 // 顯示錯誤模態視窗
 function showErrorModal(title, message, autoCloseMs = 5000) {
   // 移除現有的錯誤模態視窗
@@ -1548,6 +1630,11 @@ function createFloatingButton() {
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
         </svg>
         <div class="progress-text" style="display: none;"></div>
+      </div>
+      
+      <!-- 語言檢測顯示區域 -->
+      <div class="detected-language-section" id="detected-language-section" style="display: none;">
+        <span class="detected-language-text" id="detected-language-text"></span>
       </div>
       
       <!-- 分割線 -->
@@ -1832,6 +1919,35 @@ function updateLanguageButtonText() {
   }
 }
 
+// Display detected language
+function displayDetectedLanguage(detectedLang) {
+  const detectedLangSection = document.getElementById('detected-language-section');
+  const detectedLangText = document.getElementById('detected-language-text');
+  
+  if (!detectedLangSection || !detectedLangText) return;
+  
+  const langMap = {
+    'en': 'EN',
+    'zh': '中',
+    'zh-CN': '简',
+    'zh-TW': '繁',
+    'ja': '日',
+    'ko': '한',
+    'es': 'ES',
+    'fr': 'FR',
+    'de': 'DE'
+  };
+  
+  if (detectedLang) {
+    const displayText = langMap[detectedLang] || detectedLang.toUpperCase();
+    detectedLangText.textContent = displayText;
+    detectedLangSection.style.display = 'flex';
+    detectedLangSection.title = `檢測到: ${detectedLang}`;
+  } else {
+    detectedLangSection.style.display = 'none';
+  }
+}
+
 // 初始化浮動按鈕
 function initializeFloatingButton() {
   // 等待頁面完全載入
@@ -1959,7 +2075,9 @@ async function checkAndAutoTranslate() {
       
       if (sampleTexts.length > 0) {
         const combinedText = sampleTexts.join(' ');
-        const sampleText = combinedText.substring(0, 2000);
+        const settings = await chrome.storage.sync.get(['languageDetectionChars']);
+        const detectionChars = settings.languageDetectionChars || 600;
+        const sampleText = combinedText.substring(0, detectionChars);
         
         debugLog(`🔤 Auto-translate: Combined text ${combinedText.length} → ${sampleText.length} chars`);
         

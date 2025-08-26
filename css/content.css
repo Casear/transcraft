@@ -123,6 +123,11 @@
   overflow: hidden;
 }
 
+/* 當有語言檢測結果時調整寬度 */
+#ai-translation-floating-button:has(.detected-language-section[style*="display: flex"]) {
+  width: 120px;
+}
+
 .floating-button-content {
   display: flex;
   align-items: center;
@@ -150,6 +155,33 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+
+/* 語言檢測顯示區域 */
+.detected-language-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+  height: 100%;
+  position: relative;
+  background: rgba(255, 255, 255, 0.1);
+  min-width: 24px;
+}
+
+.detected-language-text {
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.detected-language-section::before {
+  content: '🔍';
+  font-size: 8px;
+  margin-right: 3px;
+  opacity: 0.7;
+}
 
 /* 分割線 */
 .button-divider {
@@ -330,6 +362,10 @@
     border-radius: 24px;
   }
   
+  #ai-translation-floating-button:has(.detected-language-section[style*="display: flex"]) {
+    width: 100px;
+  }
+  
   .button-divider {
     height: 28px;
   }
@@ -345,6 +381,20 @@
   .language-arrow {
     width: 8px;
     height: 8px;
+  }
+  
+  .detected-language-section {
+    padding: 0 6px;
+    min-width: 20px;
+  }
+  
+  .detected-language-text {
+    font-size: 8px;
+  }
+  
+  .detected-language-section::before {
+    font-size: 7px;
+    margin-right: 2px;
   }
   
   #ai-translation-language-menu {
@@ -498,6 +548,167 @@
   }
   
   .error-message {
+    font-size: 13px;
+  }
+}
+
+/* 相同語言模態視窗樣式 */
+#ai-translation-same-language-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 999999;
+}
+
+.same-language-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#ai-translation-same-language-modal.show .same-language-modal-overlay {
+  opacity: 1;
+}
+
+.same-language-modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  max-width: 420px;
+  width: 90%;
+  overflow: hidden;
+  transform: scale(0.9) translateY(-20px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+#ai-translation-same-language-modal.show .same-language-modal-content {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.same-language-modal-header {
+  padding: 20px 24px 16px;
+  display: flex;
+  align-items: center;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.same-language-icon {
+  font-size: 28px;
+  margin-right: 12px;
+}
+
+.same-language-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.same-language-modal-body {
+  padding: 24px;
+}
+
+.same-language-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #555;
+}
+
+.same-language-message strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.same-language-modal-footer {
+  padding: 16px 24px 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+}
+
+.same-language-close-btn {
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.same-language-close-btn:hover {
+  background: #d0d0d0;
+  transform: translateY(-1px);
+}
+
+.same-language-force-btn {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.same-language-force-btn:hover {
+  background: #1976D2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+/* 手機版調整 */
+@media (max-width: 480px) {
+  .same-language-modal-content {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .same-language-modal-header {
+    padding: 16px 20px 12px;
+  }
+  
+  .same-language-modal-body {
+    padding: 16px 20px;
+  }
+  
+  .same-language-modal-footer {
+    padding: 12px 20px 16px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  
+  .same-language-close-btn,
+  .same-language-force-btn {
+    width: 100%;
+    padding: 12px;
+  }
+  
+  .same-language-title {
+    font-size: 16px;
+  }
+  
+  .same-language-message {
     font-size: 13px;
   }
 }

@@ -200,6 +200,25 @@
             </button>
         </div>
 
+        <div class="section">
+            <h2 data-i18n="language_detection">Language Detection</h2>
+            <p class="section-description" data-i18n="language_detection_desc">Automatically detect source language and skip translation if it matches the target language</p>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="language-detection-checkbox" checked>
+                    <span style="margin-left: 8px;" data-i18n="enable_language_detection">Enable Language Detection</span>
+                </label>
+                <small class="help-text" data-i18n="language_detection_help">When enabled, the extension will detect the source language and skip translation if it's already in the target language</small>
+            </div>
+
+            <div class="form-group">
+                <label for="language-detection-chars" data-i18n="detection_chars_limit">Detection Character Limit</label>
+                <input type="number" id="language-detection-chars" min="100" max="5000" step="100" value="600">
+                <small class="help-text" data-i18n="detection_chars_help">Number of characters to use for language detection (100-5000). Default: 600 characters</small>
+            </div>
+        </div>
+
         <div class="section" id="debug-section" style="display: none;">
             <h2 data-i18n="debug_mode">🐛 Debug Mode</h2>
             <p class="section-description" data-i18n="debug_mode_desc">Developer option - When enabled, detailed debug information will be displayed in the console</p>
