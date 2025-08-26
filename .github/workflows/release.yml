@@ -1,0 +1,193 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [published]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Validate manifest.json
+        run: |
+          echo "Validating manifest.json..."
+          node -pe "
+            const manifest = JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'));
+            console.log('Extension Name:', manifest.name);
+            console.log('Version:', manifest.version);
+            console.log('Manifest Version:', manifest.manifest_version);
+            
+            // Basic validation
+            if (!manifest.name) throw new Error('Missing extension name');
+            if (!manifest.version) throw new Error('Missing version');
+            if (!manifest.manifest_version || manifest.manifest_version !== 3) {
+              throw new Error('Invalid manifest version');
+            }
+            if (!manifest.permissions) throw new Error('Missing permissions');
+            if (!manifest.content_scripts) throw new Error('Missing content scripts');
+            if (!manifest.background) throw new Error('Missing background script');
+            
+            console.log('✅ Manifest validation passed');
+          "
+
+      - name: Check required files
+        run: |
+          echo "Checking required files..."
+          
+          required_files=(
+            "manifest.json"
+            "js/background.js"
+            "js/content.js"
+            "js/popup.js"
+            "js/options.js"
+            "popup.html"
+            "options.html"
+            "css/content.css"
+            "css/popup.css"
+            "css/options.css"
+          )
+          
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+          
+          echo "All required files present"
+
+      - name: Check JavaScript syntax
+        run: |
+          echo "Checking JavaScript syntax..."
+          
+          js_files=$(find js -name "*.js" -type f)
+          for file in $js_files; do
+            echo "Checking $file..."
+            node -c "$file" || exit 1
+          done
+          
+          echo "✅ All JavaScript files have valid syntax"
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: get_version
+        run: |
+          VERSION=$(node -pe "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extension version: $VERSION"
+
+      - name: Create build directory
+        run: |
+          echo "Creating build directory..."
+          mkdir -p build
+          
+          # Copy all necessary files to build directory
+          cp -r js build/
+          cp -r css build/
+          cp -r images build/
+          cp manifest.json popup.html options.html build/
+          
+          echo "Build directory created successfully"
+
+      - name: Remove development files
+        run: |
+          echo "Cleaning up development files..."
+          cd build
+          
+          # Remove any development or testing files
+          find . -name "*.md" -delete
+          find . -name "*.test.js" -delete
+          find . -name "batch_size_limits_test.js" -delete
+          find . -name "token_limits_summary.md" -delete
+          find . -name ".DS_Store" -delete
+          find . -name "*.log" -delete
+          
+          echo "Development files removed"
+
+      - name: Create extension package
+        run: |
+          echo "Creating extension package..."
+          cd build
+          zip -r ../transcraft-v${{ steps.get_version.outputs.version }}.zip . -x "*.DS_Store" "*/.DS_Store"
+          cd ..
+          
+          echo "Package created: transcraft-v${{ steps.get_version.outputs.version }}.zip"
+          ls -la transcraft-v${{ steps.get_version.outputs.version }}.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-v${{ steps.get_version.outputs.version }}
+          path: transcraft-v${{ steps.get_version.outputs.version }}.zip
+          retention-days: 90
+
+  deploy:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-extension-v${{ needs.build.outputs.version }}
+
+      - name: Deploy to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v4.0.1
+        with:
+          file-path: transcraft-v${{ needs.build.outputs.version }}.zip
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: true
+
+      - name: Create GitHub Release Asset
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'release'
+        with:
+          files: transcraft-v${{ needs.build.outputs.version }}.zip
+          name: TransCraft v${{ needs.build.outputs.version }}
+          body: |
+            🚀 **TransCraft v${{ needs.build.outputs.version }}**
+            
+            This release has been automatically deployed to the Chrome Web Store.
+            
+            ### 📦 Installation
+            - Install from [Chrome Web Store](https://chrome.google.com/webstore/detail/${{ secrets.CHROME_EXTENSION_ID }})
+            - Or download the extension package below for manual installation
+            
+            ### 🔄 Changes
+            See the commit history for detailed changes in this release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

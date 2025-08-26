@@ -1,0 +1,137 @@
+name: Manual Deploy to Chrome Web Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      publish:
+        description: 'Publish immediately after upload'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Configure git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Get current version
+        id: current_version
+        run: |
+          VERSION=$(node -pe "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $VERSION"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          node scripts/bump-version.js ${{ inputs.version_type }}
+          NEW_VERSION=$(node -pe "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Create build
+        run: |
+          echo "Creating build for v${{ steps.bump_version.outputs.new_version }}..."
+          mkdir -p build
+          
+          # Copy necessary files
+          cp -r js css images build/
+          cp manifest.json popup.html options.html build/
+          
+          # Remove development files
+          find build -name "*.md" -delete
+          find build -name "*.test.js" -delete  
+          find build -name "batch_size_limits_test.js" -delete
+          find build -name ".DS_Store" -delete
+          
+          # Create zip package
+          cd build
+          zip -r ../transcraft-v${{ steps.bump_version.outputs.new_version }}.zip . -x "*.DS_Store" "*/.DS_Store"
+          cd ..
+          
+          echo "Package created successfully"
+          ls -la transcraft-v${{ steps.bump_version.outputs.new_version }}.zip
+
+      - name: Push version update
+        run: |
+          git push origin main
+          git push origin v${{ steps.bump_version.outputs.new_version }}
+          echo "Pushed version update to repository"
+
+      - name: Deploy to Chrome Web Store
+        uses: mnao305/chrome-extension-upload@v4.0.1
+        with:
+          file-path: transcraft-v${{ steps.bump_version.outputs.new_version }}.zip
+          extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+          client-id: ${{ secrets.CHROME_CLIENT_ID }}
+          client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          publish: ${{ inputs.publish }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          name: TransCraft v${{ steps.bump_version.outputs.new_version }}
+          files: transcraft-v${{ steps.bump_version.outputs.new_version }}.zip
+          body: |
+            🚀 **TransCraft v${{ steps.bump_version.outputs.new_version }}**
+            
+            Automatically deployed to Chrome Web Store via GitHub Actions.
+            
+            ### 📦 Installation Options
+            - **Recommended**: Install from [Chrome Web Store](https://chrome.google.com/webstore/detail/${{ secrets.CHROME_EXTENSION_ID }})
+            - **Manual**: Download the extension package below and load unpacked in Chrome
+            
+            ### 🔄 Version Changes
+            - **Previous**: v${{ steps.current_version.outputs.version }}
+            - **Current**: v${{ steps.bump_version.outputs.new_version }}
+            - **Type**: ${{ inputs.version_type }} update
+            
+            ### ⚙️ Deployment Settings
+            - **Published**: ${{ inputs.publish }}
+            - **Built**: ${{ github.run_id }}
+            - **Deployed**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-v${{ steps.bump_version.outputs.new_version }}
+          path: transcraft-v${{ steps.bump_version.outputs.new_version }}.zip
+          retention-days: 90
+
+      - name: Deployment summary
+        run: |
+          echo "## 🎉 Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ steps.bump_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ inputs.version_type }} update" >> $GITHUB_STEP_SUMMARY
+          echo "- **Published**: ${{ inputs.publish }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Chrome Web Store**: [View Extension](https://chrome.google.com/webstore/detail/${{ secrets.CHROME_EXTENSION_ID }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Release**: [v${{ steps.bump_version.outputs.new_version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.bump_version.outputs.new_version }})" >> $GITHUB_STEP_SUMMARY

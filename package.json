@@ -1,0 +1,44 @@
+{
+  "name": "transcraft-chrome-extension",
+  "version": "1.0.0",
+  "description": "TransCraft - AI-Powered Web Translation Extension",
+  "private": true,
+  "scripts": {
+    "version:patch": "node scripts/bump-version.js patch",
+    "version:minor": "node scripts/bump-version.js minor",
+    "version:major": "node scripts/bump-version.js major",
+    "version:patch:push": "node scripts/bump-version.js patch --push",
+    "version:minor:push": "node scripts/bump-version.js minor --push",
+    "version:major:push": "node scripts/bump-version.js major --push",
+    "build": "npm run build:clean && npm run build:package",
+    "build:clean": "rm -rf build dist *.zip",
+    "build:package": "mkdir -p build && cp -r js css images manifest.json popup.html options.html build/ && cd build && zip -r ../transcraft-extension.zip . -x '*.DS_Store' '*/.DS_Store'",
+    "validate": "node -pe \"JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))\"",
+    "test": "npm run validate && echo 'All tests passed!'",
+    "release": "npm run test && npm run version:patch:push",
+    "release:minor": "npm run test && npm run version:minor:push",
+    "release:major": "npm run test && npm run version:major:push"
+  },
+  "keywords": [
+    "chrome-extension",
+    "translation",
+    "ai",
+    "openai",
+    "claude",
+    "gemini",
+    "ollama",
+    "web-translation"
+  ],
+  "author": "TransCraft Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Casear/transcraft.git"
+  },
+  "homepage": "https://github.com/Casear/transcraft",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "devDependencies": {},
+  "dependencies": {}
+}

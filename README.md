@@ -257,6 +257,60 @@ Currently, all interactions are through UI. Keyboard shortcuts may be added in f
 
 The extension automatically preserves your settings during updates. Simply refresh pages after updating for changes to take effect.
 
+## 🚀 Development & Deployment
+
+### For Contributors
+
+This project uses GitHub Actions for automated deployment to Chrome Web Store:
+
+```bash
+# Quick release (patch version bump + deploy)
+npm run release
+
+# Minor version release  
+npm run release:minor
+
+# Major version release
+npm run release:major
+
+# Manual version bump only (no deploy)
+npm run version:patch
+npm run version:minor  
+npm run version:major
+```
+
+### Manual Deployment
+
+You can also trigger deployment through GitHub's web interface:
+1. Go to **Actions** → **Manual Deploy to Chrome Web Store**
+2. Click **Run workflow**
+3. Select version bump type (patch/minor/major)
+4. Choose whether to publish immediately
+5. Click **Run workflow**
+
+### Build Locally
+
+```bash
+# Install dependencies
+npm install
+
+# Validate manifest
+npm run validate
+
+# Create extension package
+npm run build
+
+# Run tests
+npm test
+```
+
+The automated deployment system:
+- ✅ Validates all files and syntax
+- 📦 Builds optimized extension package  
+- 🏷️ Creates version tags and releases
+- 🚀 Deploys to Chrome Web Store automatically
+- 📋 Creates detailed deployment summaries
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
