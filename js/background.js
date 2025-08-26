@@ -147,9 +147,15 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
     let errorMessage = 'OpenAI API error';
     try {
       const error = await response.json();
-      console.error('OpenAI API error details:', JSON.stringify(error, null, 2));
-      
       const originalError = error.error?.message || error.message;
+      
+      // 已知錯誤類型，只記錄為警告而不是錯誤
+      if (response.status === 429 || response.status === 401 || response.status === 402 || response.status === 403 || response.status === 503) {
+        console.warn(`OpenAI API known issue (${response.status}):`, originalError);
+      } else {
+        // 未知錯誤才使用 console.error
+        console.error('OpenAI API unexpected error:', JSON.stringify(error, null, 2));
+      }
       
       if (response.status === 429) {
         errorMessage = `OpenAI API 請求頻率過高，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
@@ -223,10 +229,15 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
     let errorMessage = 'Claude API error';
     try {
       const error = await response.json();
-      console.error('Claude API error details:', JSON.stringify(error, null, 2));
-      
-      // 檢查特定的錯誤類型
       const originalError = error.error?.message || error.message;
+      
+      // 已知錯誤類型，只記錄為警告而不是錯誤
+      if (response.status === 429 || response.status === 401 || response.status === 402 || response.status === 403 || response.status === 503) {
+        console.warn(`Claude API known issue (${response.status}):`, originalError);
+      } else {
+        // 未知錯誤才使用 console.error
+        console.error('Claude API unexpected error:', JSON.stringify(error, null, 2));
+      }
       
       if (response.status === 429) {
         errorMessage = `Claude API 請求頻率過高，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
@@ -304,9 +315,15 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
     let errorMessage = 'Gemini API error';
     try {
       const error = await response.json();
-      console.error('Gemini API error details:', JSON.stringify(error, null, 2));
-      
       const originalError = error.error?.message || error.message;
+      
+      // 已知錯誤類型，只記錄為警告而不是錯誤
+      if (response.status === 429 || response.status === 401 || response.status === 402 || response.status === 403 || response.status === 503) {
+        console.warn(`Gemini API known issue (${response.status}):`, originalError);
+      } else {
+        // 未知錯誤才使用 console.error
+        console.error('Gemini API unexpected error:', JSON.stringify(error, null, 2));
+      }
       
       if (response.status === 429) {
         errorMessage = `Gemini API 請求頻率過高，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
@@ -386,34 +403,47 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
     let errorMessage = 'OpenRouter API error';
     try {
       const error = await response.json();
-      console.error('OpenRouter API error details:', JSON.stringify(error, null, 2));
       
       // 檢查特定的錯誤類型並提供友好的錯誤訊息
       const originalError = error.error?.message || error.message;
+      const is429 = error.error?.code === 429 || response.status === 429;
+      const is401 = error.error?.code === 401 || response.status === 401;
+      const is402 = error.error?.code === 402 || response.status === 402;
+      const is503 = error.error?.code === 503 || response.status === 503;
       
-      if (error.error?.code === 429 || response.status === 429) {
+      // 已知錯誤類型，只記錄為警告而不是錯誤
+      if (is429 || is401 || is402 || is503) {
+        const metadata = error.error?.metadata;
+        const statusInfo = metadata?.raw || originalError || `Status ${response.status}`;
+        console.warn(`OpenRouter API known issue (${response.status}):`, statusInfo);
+      } else {
+        // 未知錯誤才使用 console.error
+        console.error('OpenRouter API unexpected error:', JSON.stringify(error, null, 2));
+      }
+      
+      if (is429) {
         // 速率限制錯誤
         const metadata = error.error?.metadata;
         if (metadata?.raw) {
           // 包含具體的速率限制信息
           if (metadata.raw.includes('temporarily rate-limited upstream')) {
             const modelName = metadata.raw.match(/(\S+) is temporarily/)?.[1] || '模型';
-            errorMessage = `${modelName}暫時被上游限制，請稍後再試或使用其他模型\n詳細：${metadata.raw}`;
+            errorMessage = `${modelName}暫時被上游限制，請稍後再試或使用其他模型`;
           } else if (metadata.raw.includes('rate-limited')) {
-            errorMessage = `請求頻率過高，請稍後再試\n詳細：${metadata.raw}`;
+            errorMessage = `請求頻率過高，請稍後再試`;
           } else {
             errorMessage = `速率限制：${metadata.raw}`;
           }
         } else {
           errorMessage = `請求頻率過高，請稍後再試或切換到其他模型${originalError ? `\n錯誤：${originalError}` : ''}`;
         }
-      } else if (error.error?.code === 401 || response.status === 401) {
+      } else if (is401) {
         // 認證錯誤
         errorMessage = `OpenRouter API Key 無效或已過期${originalError ? `\n錯誤：${originalError}` : ''}`;
-      } else if (error.error?.code === 402 || response.status === 402) {
+      } else if (is402) {
         // 付費相關錯誤
         errorMessage = `OpenRouter 餘額不足，請充值或使用免費模型${originalError ? `\n錯誤：${originalError}` : ''}`;
-      } else if (error.error?.code === 503 || response.status === 503) {
+      } else if (is503) {
         // 服務不可用
         errorMessage = `OpenRouter 服務暫時不可用，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
       } else {

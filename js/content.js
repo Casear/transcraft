@@ -443,6 +443,21 @@ async function translatePage() {
           showErrorModal('網路暫時不穩', '繼續翻譯剩餘內容...', 2000);
         } else {
           console.warn('Translation error for this batch:', errorMsg);
+          
+          // 顯示友好的錯誤消息給用戶，特別是API錯誤
+          if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高')) {
+            showErrorModal('翻譯暫時受限', errorMsg, 5000);
+          } else if (errorMsg.includes('API Key 無效') || errorMsg.includes('已過期')) {
+            showErrorModal('API Key 問題', errorMsg, 6000);
+          } else if (errorMsg.includes('餘額不足') || errorMsg.includes('權限不足')) {
+            showErrorModal('帳戶問題', errorMsg, 6000);
+          } else if (errorMsg.includes('服務暫時不可用')) {
+            showErrorModal('服務暫時中斷', errorMsg, 4000);
+          } else if (errorMsg.includes('API error') || errorMsg.includes('API_ERROR')) {
+            // 對於一般API錯誤，顯示簡化版本
+            const shortMsg = errorMsg.split('\n')[0]; // 只取第一行（友好消息）
+            showErrorModal('翻譯錯誤', shortMsg, 4000);
+          }
         }
         
         // 繼續處理下一個批次
