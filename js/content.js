@@ -30,6 +30,126 @@ function getLocalizedMessage(key, fallback = '') {
   return fallback;
 }
 
+// Language detection functions
+function detectLanguageByCharacteristics(text) {
+  // Clean text for better detection
+  const cleanText = text.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
+  if (cleanText.length < 10) return null; // Too short to detect reliably
+  
+  // Character-based detection
+  const chineseRegex = /[\u4e00-\u9fff]/g;
+  const japaneseHiraganaKatakana = /[\u3040-\u309f\u30a0-\u30ff]/g;
+  const koreanRegex = /[\uac00-\ud7af]/g;
+  const arabicRegex = /[\u0600-\u06ff]/g;
+  const thaiRegex = /[\u0e00-\u0e7f]/g;
+  const russianRegex = /[\u0400-\u04ff]/g;
+  
+  const chineseCount = (text.match(chineseRegex) || []).length;
+  const japaneseCount = (text.match(japaneseHiraganaKatakana) || []).length;
+  const koreanCount = (text.match(koreanRegex) || []).length;
+  const arabicCount = (text.match(arabicRegex) || []).length;
+  const thaiCount = (text.match(thaiRegex) || []).length;
+  const russianCount = (text.match(russianRegex) || []).length;
+  
+  const totalChars = cleanText.length;
+  
+  // If significant portion is Chinese characters
+  if (chineseCount / totalChars > 0.3) {
+    // Try to distinguish between zh-CN and zh-TW
+    const traditionalIndicators = /[繁體複雜學習開關]/g;
+    const simplifiedIndicators = /[简体复杂学习开关]/g;
+    
+    const traditionalCount = (text.match(traditionalIndicators) || []).length;
+    const simplifiedCount = (text.match(simplifiedIndicators) || []).length;
+    
+    if (simplifiedCount > traditionalCount) {
+      return 'zh-CN';
+    } else {
+      return 'zh-TW'; // Default to Traditional Chinese
+    }
+  }
+  
+  // Japanese has unique hiragana/katakana
+  if (japaneseCount / totalChars > 0.1) {
+    return 'ja';
+  }
+  
+  if (koreanCount / totalChars > 0.3) return 'ko';
+  if (arabicCount / totalChars > 0.3) return 'ar';
+  if (thaiCount / totalChars > 0.3) return 'th';
+  if (russianCount / totalChars > 0.3) return 'ru';
+  
+  // For European languages, use simple word patterns
+  const lowerText = cleanText.toLowerCase();
+  
+  // Spanish indicators
+  if (/\b(el|la|los|las|un|una|es|son|está|están|que|con|por|para|desde|hasta)\b/.test(lowerText)) {
+    return 'es';
+  }
+  
+  // French indicators  
+  if (/\b(le|la|les|un|une|du|de|des|je|tu|il|elle|nous|vous|ils|elles|est|sont|avec|pour|dans)\b/.test(lowerText)) {
+    return 'fr';
+  }
+  
+  // German indicators
+  if (/\b(der|die|das|ein|eine|ich|du|er|sie|es|wir|ihr|sie|ist|sind|und|oder|aber|mit|für|in|auf|zu)\b/.test(lowerText)) {
+    return 'de';
+  }
+  
+  // Default to English for Latin script
+  return 'en';
+}
+
+async function detectLanguageWithBrowser(text) {
+  // Try browser's built-in language detection if available
+  if ('detectLanguage' in chrome.i18n) {
+    try {
+      const detectedLang = await chrome.i18n.detectLanguage(text);
+      if (detectedLang && detectedLang.languages && detectedLang.languages.length > 0) {
+        const mostLikely = detectedLang.languages[0];
+        if (mostLikely.percentage > 70) { // Only trust high confidence results
+          return mostLikely.language;
+        }
+      }
+    } catch (error) {
+      debugLog('Browser language detection failed:', error);
+    }
+  }
+  return null;
+}
+
+async function detectLanguage(text) {
+  // First try browser detection
+  const browserDetection = await detectLanguageWithBrowser(text);
+  if (browserDetection) {
+    debugLog('Browser detected language:', browserDetection);
+    return browserDetection;
+  }
+  
+  // Fallback to character-based detection
+  const characterDetection = detectLanguageByCharacteristics(text);
+  debugLog('Character-based detection:', characterDetection);
+  return characterDetection;
+}
+
+function shouldTranslate(sourceLanguage, targetLanguage) {
+  if (!sourceLanguage || !targetLanguage) return true; // Proceed if uncertain
+  
+  // Normalize language codes
+  const normalizeLanguage = (lang) => {
+    if (lang.startsWith('zh')) {
+      return lang; // Keep Chinese variants separate
+    }
+    return lang.split('-')[0]; // Remove region codes for other languages
+  };
+  
+  const normalizedSource = normalizeLanguage(sourceLanguage);
+  const normalizedTarget = normalizeLanguage(targetLanguage);
+  
+  return normalizedSource !== normalizedTarget;
+}
+
 // Debug logging utility
 function debugLog(...args) {
   if (debugMode) {
@@ -64,10 +184,23 @@ function debugError(...args) {
     autoTranslateEnabled = autoTranslateDomains[currentDomain] || false;
     debugLog('Auto-translate for', currentDomain, ':', autoTranslateEnabled);
     
-    // Update UI when settings are loaded
-    setTimeout(() => {
-      updateAutoTranslateButton();
-    }, 100);
+    // Update UI when settings are loaded - retry multiple times to ensure button exists
+    let retryCount = 0;
+    const maxRetries = 10;
+    const updateButtonWithRetry = () => {
+      const translateSection = document.getElementById('translate-section');
+      if (translateSection) {
+        updateAutoTranslateButton();
+        debugLog('Auto-translate button updated successfully');
+      } else if (retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(updateButtonWithRetry, 200);
+        debugLog(`Retrying auto-translate button update (${retryCount}/${maxRetries})`);
+      } else {
+        debugLog('Failed to find translate-section after all retries');
+      }
+    };
+    updateButtonWithRetry();
   });
 })();
 
@@ -102,13 +235,27 @@ async function saveAutoTranslateState(enabled) {
 async function toggleAutoTranslate() {
   autoTranslateEnabled = !autoTranslateEnabled;
   await saveAutoTranslateState(autoTranslateEnabled);
-  updateAutoTranslateButton();
   
   debugLog('Auto-translate toggled for', currentDomain, ':', autoTranslateEnabled);
   
+  // Update button state with retry mechanism
+  let retryCount = 0;
+  const maxRetries = 5;
+  const updateButtonWithRetry = () => {
+    const translateSection = document.getElementById('translate-section');
+    if (translateSection) {
+      updateAutoTranslateButton();
+      debugLog('Auto-translate button updated after toggle');
+    } else if (retryCount < maxRetries) {
+      retryCount++;
+      setTimeout(updateButtonWithRetry, 100);
+    }
+  };
+  updateButtonWithRetry();
+  
   // Show status message
   const status = autoTranslateEnabled ? '已開啟' : '已關閉';
-  showFloatingMessage(`自動翻譯${status}`);
+  showFloatingMessage(`${getLocalizedMessage('auto_translate', '自動翻譯')}${status}`);
 }
 
 // 顯示浮動消息
@@ -476,11 +623,49 @@ async function translatePage() {
   }
 
   const elements = getTranslatableElements();
-  const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'selectedModel']);
+  const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'selectedModel', 'enableLanguageDetection']);
   
   if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
     alert('請先在擴充功能設定中配置 API Key');
     return;
+  }
+
+  // Language detection before translation
+  let skipCount = 0;
+  if (apiConfig.enableLanguageDetection !== false) { // Enabled by default
+    debugLog('Language detection enabled, checking content...');
+    
+    // Sample some text from the page for language detection
+    const sampleTexts = elements.slice(0, 5).map(el => el.textContent).filter(text => text.trim().length > 20);
+    if (sampleTexts.length > 0) {
+      const sampleText = sampleTexts.join(' ').substring(0, 1000);
+      const detectedLanguage = await detectLanguage(sampleText);
+      
+      debugLog('Detected language:', detectedLanguage, 'Target language:', targetLanguage);
+      
+      if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
+        const langNames = {
+          'en': 'English',
+          'zh-TW': '繁體中文',
+          'zh-CN': '簡體中文',
+          'ja': '日本語',
+          'ko': '한국어',
+          'es': 'Español',
+          'fr': 'Français',
+          'de': 'Deutsch'
+        };
+        
+        const sourceLangName = langNames[detectedLanguage] || detectedLanguage;
+        const targetLangName = langNames[targetLanguage] || targetLanguage;
+        
+        showErrorModal(
+          getLocalizedMessage('translation_skipped', '翻譯已跳過'),
+          `${getLocalizedMessage('content_already_in_target_language', '內容已經是目標語言')}: ${targetLangName}<br>${getLocalizedMessage('detected_language', '檢測到的語言')}: ${sourceLangName}`,
+          3000
+        );
+        return;
+      }
+    }
   }
 
   isTranslating = true;
@@ -1452,14 +1637,30 @@ function initializeFloatingButton() {
 // 初始化
 initializeFloatingButton();
 
-// 確保在DOM完全創建後更新自動翻譯狀態
-setTimeout(() => {
-  updateAutoTranslateButton();
-}, 200);
+// 確保在DOM完全創建後更新自動翻譯狀態 - 增加多次重試
+let buttonInitRetryCount = 0;
+const maxButtonInitRetries = 20;
+const initAutoTranslateButton = () => {
+  const translateSection = document.getElementById('translate-section');
+  if (translateSection) {
+    updateAutoTranslateButton();
+    debugLog('Auto-translate button initialized successfully');
+  } else if (buttonInitRetryCount < maxButtonInitRetries) {
+    buttonInitRetryCount++;
+    setTimeout(initAutoTranslateButton, 200);
+    debugLog(`Retrying auto-translate button init (${buttonInitRetryCount}/${maxButtonInitRetries})`);
+  } else {
+    debugLog('Failed to initialize auto-translate button after all retries');
+  }
+};
+initAutoTranslateButton();
 
 // 自動翻譯邏輯
 async function checkAndAutoTranslate() {
-  if (!autoTranslateEnabled) return;
+  if (!autoTranslateEnabled) {
+    debugLog('Auto-translate disabled for', currentDomain);
+    return;
+  }
   
   debugLog('Auto-translate is enabled for', currentDomain, ', checking if page should be translated');
   
@@ -1467,7 +1668,7 @@ async function checkAndAutoTranslate() {
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   // 檢查是否已經有API配置
-  const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys']);
+  const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'enableLanguageDetection']);
   if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
     debugLog('No API configuration found, skipping auto-translate');
     return;
@@ -1478,6 +1679,20 @@ async function checkAndAutoTranslate() {
   if (elements.length === 0) {
     debugLog('No translatable elements found, skipping auto-translate');
     return;
+  }
+  
+  // 如果啟用語言檢測，先檢查是否需要翻譯
+  if (apiConfig.enableLanguageDetection !== false) {
+    const sampleTexts = elements.slice(0, 5).map(el => el.textContent).filter(text => text.trim().length > 20);
+    if (sampleTexts.length > 0) {
+      const sampleText = sampleTexts.join(' ').substring(0, 1000);
+      const detectedLanguage = await detectLanguage(sampleText);
+      
+      if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
+        debugLog('Auto-translate skipped: content is already in target language', detectedLanguage);
+        return;
+      }
+    }
   }
   
   debugLog('Starting auto-translation for', elements.length, 'elements');

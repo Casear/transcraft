@@ -118,6 +118,7 @@ const messages = {
     'translating': 'Translating...',
     'restore_original': 'Restore Original',
     'translation_failed': 'Translation failed',
+    'auto_translate': 'Auto-translate',
     'auto_translate_enabled': 'Left click: Translate page | Right click: Turn off auto-translate',
     'auto_translate_disabled': 'Left click: Translate page | Right click: Turn on auto-translate',
     'cannot_translate_on_page': 'Cannot translate on this page',
@@ -134,6 +135,15 @@ const messages = {
     'gemini_max_tokens': 'Gemini response exceeds token limit, please reduce translation content or adjust batch size',
     'gemini_safety_block': 'Gemini refused to translate this content for safety reasons',
     'gemini_no_translation': 'Gemini response contains no translation text',
+    
+    // Language detection
+    'enable_language_detection': 'Enable Language Detection',
+    'language_detection': 'Language Detection',
+    'language_detection_desc': 'Automatically detect source language and skip translation if it matches the target language',
+    'translation_skipped': 'Translation Skipped',
+    'content_already_in_target_language': 'Content is already in target language',
+    'detected_language': 'Detected language',
+    'language_detection_help': 'When enabled, the extension will detect the source language and skip translation if it\'s already in the target language',
     
     // Placeholder messages for dynamic content
     'translation_partial_error': 'Successfully translated $1 elements, $2 elements failed to translate.<br>This may be due to network issues or API limitations.'
@@ -255,6 +265,7 @@ const messages = {
     'translating': '翻譯中...',
     'restore_original': '恢復原文',
     'translation_failed': '翻譯失敗',
+    'auto_translate': '自動翻譯',
     'auto_translate_enabled': '左鍵：翻譯頁面 | 右鍵：關閉自動翻譯',
     'auto_translate_disabled': '左鍵：翻譯頁面 | 右鍵：開啟自動翻譯',
     'cannot_translate_on_page': '無法在此頁面上執行翻譯',
@@ -271,6 +282,15 @@ const messages = {
     'gemini_max_tokens': 'Gemini 回應超過 token 限制，請減少翻譯內容量或調整批次大小',
     'gemini_safety_block': 'Gemini 因安全原因拒絕翻譯此內容',
     'gemini_no_translation': 'Gemini 回應中沒有翻譯文本',
+    
+    // Language detection
+    'enable_language_detection': '啟用語言檢測',
+    'language_detection': '語言檢測',
+    'language_detection_desc': '自動檢測來源語言，如果與目標語言相同則跳過翻譯',
+    'translation_skipped': '翻譯已跳過',
+    'content_already_in_target_language': '內容已經是目標語言',
+    'detected_language': '檢測到的語言',
+    'language_detection_help': '啟用後，擴展會檢測來源語言，如果已經是目標語言則跳過翻譯',
     
     // Placeholder messages for dynamic content
     'translation_partial_error': '成功翻譯 $1 個元素，$2 個元素翻譯失敗。<br>可能是因為網路問題或 API 限制。'
@@ -392,6 +412,7 @@ const messages = {
     'translating': '翻訳中...',
     'restore_original': '元のテキストに戻す',
     'translation_failed': '翻訳に失敗しました',
+    'auto_translate': '自動翻訳',
     'auto_translate_enabled': '左クリック：ページを翻訳 | 右クリック：自動翻訳をオフ',
     'auto_translate_disabled': '左クリック：ページを翻訳 | 右クリック：自動翻訳をオン',
     'cannot_translate_on_page': 'このページでは翻訳を実行できません',
@@ -408,6 +429,15 @@ const messages = {
     'gemini_max_tokens': 'Gemini のレスポンスがトークン制限を超えています。翻訳内容を減らすかバッチサイズを調整してください',
     'gemini_safety_block': 'Gemini は安全上の理由でこのコンテンツの翻訳を拒否しました',
     'gemini_no_translation': 'Gemini のレスポンスに翻訳テキストが含まれていません',
+    
+    // Language detection
+    'enable_language_detection': '言語検出を有効にする',
+    'language_detection': '言語検出',
+    'language_detection_desc': 'ソース言語を自動検出し、ターゲット言語と同じ場合は翻訳をスキップ',
+    'translation_skipped': '翻訳をスキップしました',
+    'content_already_in_target_language': 'コンテンツは既にターゲット言語です',
+    'detected_language': '検出された言語',
+    'language_detection_help': '有効にすると、拡張機能がソース言語を検出し、ターゲット言語と同じ場合は翻訳をスキップします',
     
     // Placeholder messages for dynamic content
     'translation_partial_error': '$1 個の要素の翻訳に成功し、$2 個の要素の翻訳に失敗しました。<br>ネットワークの問題やAPI制限が原因の可能性があります。'
