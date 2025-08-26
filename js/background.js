@@ -542,7 +542,15 @@ async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'l
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'translate') {
     handleTranslation(request).then(sendResponse).catch(error => {
-      console.error('Translation error in background:', error);
+      // 根據錯誤類型決定日誌級別
+      const errorMsg = error.message;
+      if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高') || 
+          errorMsg.includes('API Key 無效') || errorMsg.includes('餘額不足') || 
+          errorMsg.includes('服務暫時不可用')) {
+        console.warn('Translation known issue:', errorMsg);
+      } else {
+        console.error('Translation unexpected error:', error);
+      }
       sendResponse({ error: error.message });
     });
     return true; // 表示異步響應

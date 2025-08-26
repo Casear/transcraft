@@ -302,6 +302,7 @@ async function translatePage() {
   
   let successCount = 0;
   let processedElements = 0;
+  let errors = []; // 收集所有錯誤，最後統一顯示
   
   // 動態批次處理
   while (processedElements < elements.length) {
@@ -434,30 +435,60 @@ async function translatePage() {
           return;
         }
         
-        // 對於網路或配額錯誤，顯示警告但繼續處理
+        // 收集錯誤信息，不立即顯示
+        console.warn('Translation error for this batch:', errorMsg);
+        
+        // 將錯誤添加到錯誤集合中
         if (errorMsg === 'QUOTA_EXCEEDED') {
-          console.warn('Quota exceeded, some content may not be translated');
-          showErrorModal('配額已用完', '部分內容可能未翻譯。請檢查您的 API 帳單設定。', 3000);
+          errors.push({ type: 'quota', message: '配額已用完', detail: '部分內容可能未翻譯。請檢查您的 API 帳單設定。' });
         } else if (errorMsg === 'NETWORK_ERROR') {
-          console.warn('Network error, retrying remaining content');
-          showErrorModal('網路暫時不穩', '繼續翻譯剩餘內容...', 2000);
+          errors.push({ type: 'network', message: '網路暫時不穩', detail: '繼續翻譯剩餘內容...' });
+        } else if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高') || 
+                   errorMsg.includes('rate-limited') || errorMsg.includes('temporarily') ||
+                   errorMsg.includes('暫時被限制') || errorMsg.includes('限制使用')) {
+          errors.push({ type: 'rate_limit', message: '翻譯暫時受限', detail: errorMsg });
+        } else if (errorMsg.includes('API Key 無效') || errorMsg.includes('已過期')) {
+          errors.push({ type: 'api_key', message: 'API Key 問題', detail: errorMsg });
+        } else if (errorMsg.includes('餘額不足') || errorMsg.includes('權限不足')) {
+          errors.push({ type: 'account', message: '帳戶問題', detail: errorMsg });
+        } else if (errorMsg.includes('服務暫時不可用')) {
+          errors.push({ type: 'service', message: '服務暫時中斷', detail: errorMsg });
+        } else if (errorMsg.includes('API error') || errorMsg.includes('API_ERROR')) {
+          const shortMsg = errorMsg.split('\n')[0]; // 只取第一行（友好消息）
+          errors.push({ type: 'api_error', message: '翻譯錯誤', detail: shortMsg });
         } else {
-          console.warn('Translation error for this batch:', errorMsg);
+          // 對於未知錯誤，嘗試提取可理解的部分
+          let displayMessage = '翻譯過程出現問題';
+          let extractedInfo = '';
           
-          // 顯示友好的錯誤消息給用戶，特別是API錯誤
-          if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高')) {
-            showErrorModal('翻譯暫時受限', errorMsg, 5000);
-          } else if (errorMsg.includes('API Key 無效') || errorMsg.includes('已過期')) {
-            showErrorModal('API Key 問題', errorMsg, 6000);
-          } else if (errorMsg.includes('餘額不足') || errorMsg.includes('權限不足')) {
-            showErrorModal('帳戶問題', errorMsg, 6000);
-          } else if (errorMsg.includes('服務暫時不可用')) {
-            showErrorModal('服務暫時中斷', errorMsg, 4000);
-          } else if (errorMsg.includes('API error') || errorMsg.includes('API_ERROR')) {
-            // 對於一般API錯誤，顯示簡化版本
-            const shortMsg = errorMsg.split('\n')[0]; // 只取第一行（友好消息）
-            showErrorModal('翻譯錯誤', shortMsg, 4000);
+          // 嘗試提取模型名稱
+          const modelMatch = errorMsg.match(/(\S+\/\S+):?\s*(.*?)$/);
+          if (modelMatch) {
+            const modelName = modelMatch[1];
+            const errorInfo = modelMatch[2] || errorMsg;
+            extractedInfo = `模型 ${modelName} 暫時無法使用`;
+            if (errorInfo.includes('rate-limited') || errorInfo.includes('限制')) {
+              extractedInfo = `模型 ${modelName} 暫時被限制使用`;
+            } else if (errorInfo.includes('unavailable') || errorInfo.includes('不可用')) {
+              extractedInfo = `模型 ${modelName} 暫時不可用`;
+            }
           }
+          
+          // 檢查是否包含常見錯誤關鍵詞
+          if (errorMsg.includes('timeout') || errorMsg.includes('超時')) {
+            extractedInfo = '請求超時，請稍後重試';
+          } else if (errorMsg.includes('connection') || errorMsg.includes('連線')) {
+            extractedInfo = '連線問題，請檢查網路';
+          } else if (errorMsg.includes('invalid') && errorMsg.includes('key')) {
+            extractedInfo = 'API 金鑰可能有問題';
+          } else if (errorMsg.includes('quota') || errorMsg.includes('limit')) {
+            extractedInfo = 'API 使用額度可能已達上限';
+          }
+          
+          const finalMessage = extractedInfo || displayMessage;
+          const detailMessage = extractedInfo ? `${finalMessage}\n技術細節：${errorMsg}` : errorMsg;
+          
+          errors.push({ type: 'unknown', message: finalMessage, detail: detailMessage });
         }
         
         // 繼續處理下一個批次
@@ -481,8 +512,11 @@ async function translatePage() {
   // 顯示翻譯統計
   console.log(`翻譯完成: 成功翻譯 ${successCount} / ${elements.length} 個元素`);
   
-  // 如果有部分失敗，顯示警告
-  if (successCount < elements.length) {
+  // 統一顯示錯誤摘要
+  if (errors.length > 0) {
+    showTranslationErrorSummary(errors, successCount, elements.length);
+  } else if (successCount < elements.length) {
+    // 如果沒有收集到具體錯誤但有失敗，顯示一般提示
     const failedCount = elements.length - successCount;
     showErrorModal('部分內容未翻譯', 
       `成功翻譯 ${successCount} 個元素，${failedCount} 個元素翻譯失敗。<br>可能是因為網路問題或 API 限制。`, 
@@ -584,6 +618,71 @@ function restoreOriginalText() {
 function updateLoadingProgress(percentage) {
   // 只更新浮動按鈕的進度
   updateFloatingButtonProgress(percentage);
+}
+
+// 顯示翻譯錯誤摘要
+function showTranslationErrorSummary(errors, successCount, totalCount) {
+  // 統計錯誤類型
+  const errorCounts = {};
+  const uniqueErrors = [];
+  
+  errors.forEach(error => {
+    if (!errorCounts[error.type]) {
+      errorCounts[error.type] = 0;
+      uniqueErrors.push(error);
+    }
+    errorCounts[error.type]++;
+  });
+  
+  // 生成錯誤摘要
+  const failedCount = totalCount - successCount;
+  let title = '翻譯完成，部分內容有問題';
+  let summaryLines = [`成功翻譯 ${successCount} 個，失敗 ${failedCount} 個元素`];
+  
+  // 按優先級排序錯誤類型
+  const errorPriority = {
+    'rate_limit': 1,
+    'api_key': 2,
+    'account': 3,
+    'quota': 4,
+    'service': 5,
+    'network': 6,
+    'api_error': 7,
+    'unknown': 8
+  };
+  
+  uniqueErrors.sort((a, b) => (errorPriority[a.type] || 9) - (errorPriority[b.type] || 9));
+  
+  // 顯示最主要的錯誤（最多3個）
+  const maxErrorsToShow = 3;
+  for (let i = 0; i < Math.min(uniqueErrors.length, maxErrorsToShow); i++) {
+    const error = uniqueErrors[i];
+    const count = errorCounts[error.type];
+    const countText = count > 1 ? ` (${count}次)` : '';
+    summaryLines.push(`• ${error.message}${countText}`);
+  }
+  
+  // 如果有更多錯誤，顯示省略信息
+  if (uniqueErrors.length > maxErrorsToShow) {
+    summaryLines.push(`• 還有 ${uniqueErrors.length - maxErrorsToShow} 種其他問題...`);
+  }
+  
+  // 添加建議
+  const primaryError = uniqueErrors[0];
+  if (primaryError.type === 'rate_limit') {
+    summaryLines.push('', '建議：請稍後重試或切換其他模型');
+  } else if (primaryError.type === 'api_key') {
+    summaryLines.push('', '建議：請檢查 API Key 設定');
+  } else if (primaryError.type === 'account') {
+    summaryLines.push('', '建議：請檢查帳戶餘額或權限');
+  } else if (primaryError.type === 'quota') {
+    summaryLines.push('', '建議：請檢查 API 配額設定');
+  }
+  
+  const message = summaryLines.join('<br>');
+  const autoCloseMs = Math.max(6000, Math.min(12000, summaryLines.length * 1000));
+  
+  showErrorModal(title, message, autoCloseMs);
 }
 
 // 顯示錯誤模態視窗
