@@ -24,6 +24,14 @@
                     <input type="radio" name="api" value="gemini" id="gemini-radio">
                     Gemini (Google)
                 </label>
+                <label>
+                    <input type="radio" name="api" value="openrouter" id="openrouter-radio">
+                    OpenRouter
+                </label>
+                <label>
+                    <input type="radio" name="api" value="ollama" id="ollama-radio">
+                    Ollama (本地)
+                </label>
             </div>
         </div>
 
@@ -56,6 +64,48 @@
                     從 <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> 取得
                     <br><small>支援 Gemini 1.5 Flash、Gemini 1.5 Pro</small>
                 </p>
+            </div>
+
+            <div class="api-section" id="openrouter-section" style="display: none;">
+                <h3>🌐 OpenRouter API Key</h3>
+                <input type="password" id="openrouter-key" placeholder="sk-or-v1-...">
+                <p class="help-text">
+                    從 <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> 取得
+                    <br><small>支援 Claude、GPT、Llama、Gemini 等多種模型</small>
+                </p>
+                <div class="openrouter-setup-info">
+                    <details>
+                        <summary>⚠️ 重要設定步驟</summary>
+                        <ol>
+                            <li><strong>1. 獲取 API Key：</strong>到 <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Keys</a> 創建 API Key</li>
+                            <li><strong>2. 配置隱私設定：</strong>到 <a href="https://openrouter.ai/settings/privacy" target="_blank">隱私設定</a></li>
+                            <li><strong>3. 啟用模型訓練：</strong>勾選 "Allow training on prompts" 或類似選項</li>
+                            <li><strong>4. 保存設定：</strong>確保設定已保存後再測試連接</li>
+                            <li><strong>5. 等待生效：</strong>設定可能需要幾分鐘才會生效</li>
+                        </ol>
+                        <p><small>💡 注意：如果不啟用 prompt training，某些免費模型將無法使用</small></p>
+                    </details>
+                </div>
+            </div>
+
+            <div class="api-section" id="ollama-section" style="display: none;">
+                <h3>🦙 Ollama 本地服務</h3>
+                <input type="text" id="ollama-key" placeholder="無需 API Key（本地運行）" disabled style="background-color: #f5f5f5;">
+                <p class="help-text">
+                    請確認 <a href="https://ollama.ai" target="_blank">Ollama</a> 已安裝並運行在 localhost:11434
+                    <br><small>本地 AI 模型，完全私密，無需網路連線</small>
+                </p>
+                <div class="ollama-setup-info">
+                    <details>
+                        <summary>📋 快速設定指南</summary>
+                        <ol>
+                            <li>下載並安裝 <a href="https://ollama.ai" target="_blank">Ollama</a></li>
+                            <li>開啟終端機執行：<code>ollama serve</code></li>
+                            <li>下載模型：<code>ollama pull llama3.1:8b</code></li>
+                            <li>測試連接：<code>ollama list</code></li>
+                        </ol>
+                    </details>
+                </div>
             </div>
 
             <div class="no-service-selected" id="no-service-message">

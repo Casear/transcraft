@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:openrouter.ai)",
+      "WebFetch(domain:ncode.syosetu.com)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

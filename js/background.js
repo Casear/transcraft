@@ -1,14 +1,16 @@
 const API_ENDPOINTS = {
   openai: 'https://api.openai.com/v1/chat/completions',
   claude: 'https://api.anthropic.com/v1/messages',
-  gemini: 'https://generativelanguage.googleapis.com/v1beta/models/'
+  gemini: 'https://generativelanguage.googleapis.com/v1beta/models/',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+  ollama: 'http://localhost:11434/api/chat'
 };
 
 const DEFAULT_EXPERT_MODE_PROMPTS = {
   general: {
     name: '一般翻譯',
     description: '標準翻譯模式',
-    systemPrompt: 'You are a professional translator. Translate the following text to {targetLanguage}. Preserve the original formatting and tone. Only return the translated text without any explanations.',
+    systemPrompt: 'You are a professional translator. Translate the following text to {targetLanguage}. IMPORTANT: If you see <<TRANSLATE_SEPARATOR>> in the text, you MUST preserve it exactly as is in your translation. This is a delimiter between different text segments. Preserve the original formatting and tone. Only return the translated text without any explanations.',
     isDefault: true
   },
   novel_general: {
@@ -73,10 +75,33 @@ const DEFAULT_EXPERT_MODE_PROMPTS = {
   }
 };
 
+// 為系統提示添加分隔符保留指令
+function addSeparatorPreservationToPrompt(prompt) {
+  const separatorInstruction = 'CRITICAL INSTRUCTION: The text contains <<TRANSLATE_SEPARATOR>> markers that divide different text segments. You MUST:\n1. Translate each segment separately\n2. Keep the <<TRANSLATE_SEPARATOR>> markers EXACTLY as they appear in the original text\n3. Maintain the same number of segments as the input\n4. Do NOT combine segments or change the separator format\n\n';
+  
+  // 如果提示中已經包含分隔符指令，則不重複添加
+  if (prompt.includes('<<TRANSLATE_SEPARATOR>>')) {
+    return prompt;
+  }
+  
+  // 在提示開頭添加分隔符指令
+  return separatorInstruction + prompt;
+}
+
 async function getExpertModePrompts() {
   const storage = await chrome.storage.sync.get(['customExpertModes']);
   const customModes = storage.customExpertModes || {};
-  return { ...DEFAULT_EXPERT_MODE_PROMPTS, ...customModes };
+  
+  // 為所有默認模式添加分隔符保留指令
+  const enhancedDefaultModes = {};
+  for (const [key, mode] of Object.entries(DEFAULT_EXPERT_MODE_PROMPTS)) {
+    enhancedDefaultModes[key] = {
+      ...mode,
+      systemPrompt: addSeparatorPreservationToPrompt(mode.systemPrompt)
+    };
+  }
+  
+  return { ...enhancedDefaultModes, ...customModes };
 }
 
 async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o-mini', expertMode = 'general') {
@@ -221,6 +246,102 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
   return data.candidates[0].content.parts[0].text;
 }
 
+async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'meta-llama/llama-3.1-8b-instruct:free', expertMode = 'general') {
+  const languageNames = {
+    'zh-TW': 'Traditional Chinese',
+    'zh-CN': 'Simplified Chinese',
+    'en': 'English',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German'
+  };
+
+  const allExpertModes = await getExpertModePrompts();
+  const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
+  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+
+  const response = await fetch(API_ENDPOINTS.openrouter, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://transcraft.extension',
+      'X-Title': 'TransCraft Extension'
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: text
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 2000
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'OpenRouter API error');
+  }
+
+  const data = await response.json();
+  return data.choices[0].message.content;
+}
+
+async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'llama3.1:8b', expertMode = 'general') {
+  const languageNames = {
+    'zh-TW': 'Traditional Chinese',
+    'zh-CN': 'Simplified Chinese',
+    'en': 'English',
+    'ja': 'Japanese',
+    'ko': 'Korean',
+    'es': 'Spanish',
+    'fr': 'French',
+    'de': 'German'
+  };
+
+  const allExpertModes = await getExpertModePrompts();
+  const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
+  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+
+  const response = await fetch(API_ENDPOINTS.ollama, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: text
+        }
+      ],
+      stream: false
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(error || 'Ollama API error - 請確認 Ollama 服務正在運行');
+  }
+
+  const data = await response.json();
+  return data.message.content;
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'translate') {
     handleTranslation(request).then(sendResponse).catch(error => {
@@ -274,6 +395,12 @@ async function handleTranslation(request) {
       case 'gemini':
         translation = await translateWithGemini(text, targetLanguage, apiKey, selectedModel || 'gemini-1.5-flash', expertMode);
         break;
+      case 'openrouter':
+        translation = await translateWithOpenRouter(text, targetLanguage, apiKey, selectedModel || 'deepseek/deepseek-r1-distill-llama-70b:free', expertMode);
+        break;
+      case 'ollama':
+        translation = await translateWithOllama(text, targetLanguage, apiKey, selectedModel || 'llama3.1:8b', expertMode);
+        break;
       default:
         throw new Error('未選擇有效的 API');
     }
@@ -300,6 +427,12 @@ async function testAPIConnection(request) {
         break;
       case 'gemini':
         result = await translateWithGemini(testText, 'zh-TW', apiKey, model, expertMode);
+        break;
+      case 'openrouter':
+        result = await translateWithOpenRouter(testText, 'zh-TW', apiKey, model, expertMode);
+        break;
+      case 'ollama':
+        result = await translateWithOllama(testText, 'zh-TW', apiKey, model, expertMode);
         break;
     }
     

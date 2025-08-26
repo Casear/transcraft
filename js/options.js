@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     const apiInputs = {
         openai: document.getElementById('openai-key'),
         claude: document.getElementById('claude-key'),
-        gemini: document.getElementById('gemini-key')
+        gemini: document.getElementById('gemini-key'),
+        openrouter: document.getElementById('openrouter-key'),
+        ollama: document.getElementById('ollama-key')
     };
 
     const modelData = {
@@ -88,6 +90,60 @@ document.addEventListener('DOMContentLoaded', async function() {
                 { value: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash-8B', type: 'fast', desc: '輕量級模型，適合簡單任務' }
             ],
             defaultModel: 'gemini-2.5-flash'
+        },
+        openrouter: {
+            models: [
+                // 2025年確認可用的免費模型
+                { value: 'deepseek/deepseek-r1-distill-llama-70b:free', name: 'DeepSeek R1 70B (免費)', type: 'powerful', desc: '高品質免費模型，優秀翻譯能力' },
+                { value: 'deepseek/deepseek-chat-v3-0324:free', name: 'DeepSeek Chat V3 (免費)', type: 'balanced', desc: 'DeepSeek 聊天模型，編碼和翻譯能力強' },
+                { value: 'google/gemma-3-27b-it:free', name: 'Gemma 3 27B (免費)', type: 'powerful', desc: 'Google 最新開源模型，高品質翻譯' },
+                { value: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B (免費)', type: 'powerful', desc: 'Meta 最新大型模型，優秀理解能力' },
+                { value: 'qwen/qwq-32b:free', name: 'QwQ 32B (免費)', type: 'powerful', desc: '阿里雲推理優化模型，中文翻譯佳' },
+                { value: 'microsoft/phi-3-mini-128k-instruct:free', name: 'Phi-3 Mini 128K (免費)', type: 'fast', desc: '微軟輕量級模型，長上下文支援' },
+                
+                // 付費但便宜的模型
+                { value: 'anthropic/claude-3-5-haiku', name: 'Claude 3.5 Haiku', type: 'balanced', desc: '快速且智能的平衡選擇' },
+                { value: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', type: 'balanced', desc: '高效能低成本，熱門選擇' },
+                { value: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B', type: 'balanced', desc: '平衡性能的熱門選擇' },
+                { value: 'google/gemini-flash-1.5', name: 'Gemini Flash 1.5', type: 'balanced', desc: '快速多功能模型' },
+                { value: 'mistralai/mistral-7b-instruct', name: 'Mistral 7B', type: 'balanced', desc: '高效能開源模型' },
+                
+                // 高品質付費模型
+                { value: 'anthropic/claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', type: 'powerful', desc: '最智能的 Claude 模型，卓越翻譯品質' },
+                { value: 'openai/gpt-4o', name: 'GPT-4o', type: 'powerful', desc: '多模態 GPT-4，優秀多語言支援' },
+                { value: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', type: 'powerful', desc: '大型開源模型，優秀的理解能力' },
+                { value: 'mistralai/mixtral-8x7b-instruct', name: 'Mixtral 8x7B', type: 'powerful', desc: '專家混合模型，優秀性能' },
+                { value: 'google/gemini-pro-1.5', name: 'Gemini Pro 1.5', type: 'powerful', desc: '高級多模態模型，長上下文' }
+            ],
+            defaultModel: 'deepseek/deepseek-r1-distill-llama-70b:free'
+        },
+        ollama: {
+            models: [
+                // Llama 系列
+                { value: 'llama3.1:8b', name: 'Llama 3.1 8B', type: 'balanced', desc: '通用能力強，4.7GB 記憶體需求' },
+                { value: 'llama3.1:13b', name: 'Llama 3.1 13B', type: 'powerful', desc: '更強推理能力，7.4GB 記憶體需求' },
+                { value: 'llama3.1:70b', name: 'Llama 3.1 70B', type: 'powerful', desc: '頂級性能，40GB+ 記憶體需求' },
+                { value: 'llama3.2:3b', name: 'Llama 3.2 3B', type: 'fast', desc: '輕量級模型，2GB 記憶體需求' },
+                { value: 'llama3.2:1b', name: 'Llama 3.2 1B', type: 'fast', desc: '超輕量級，1.3GB 記憶體需求' },
+                
+                // Gemma 系列
+                { value: 'gemma2:9b', name: 'Gemma 2 9B', type: 'balanced', desc: 'Google 開源模型，5.4GB 記憶體需求' },
+                { value: 'gemma2:27b', name: 'Gemma 2 27B', type: 'powerful', desc: '大型 Gemma 模型，16GB 記憶體需求' },
+                { value: 'gemma2:2b', name: 'Gemma 2 2B', type: 'fast', desc: '輕量級 Gemma，1.6GB 記憶體需求' },
+                
+                // Mistral 系列
+                { value: 'mistral:7b', name: 'Mistral 7B', type: 'balanced', desc: '高效能開源模型，4.1GB 記憶體需求' },
+                { value: 'mixtral:8x7b', name: 'Mixtral 8x7B', type: 'powerful', desc: '專家混合模型，26GB 記憶體需求' },
+                
+                // 程式碼專用
+                { value: 'codellama:7b', name: 'CodeLlama 7B', type: 'balanced', desc: '程式碼理解優化，3.8GB 記憶體需求' },
+                { value: 'deepseek-coder:6.7b', name: 'DeepSeek Coder 6.7B', type: 'balanced', desc: '程式碼生成專用，3.8GB 記憶體需求' },
+                
+                // 中文優化
+                { value: 'qwen2:7b', name: 'Qwen 2 7B', type: 'balanced', desc: '中文能力優化，4.4GB 記憶體需求' },
+                { value: 'qwen2:72b', name: 'Qwen 2 72B', type: 'powerful', desc: '大型中文模型，41GB 記憶體需求' }
+            ],
+            defaultModel: 'llama3.1:8b'
         }
     };
 
@@ -199,7 +255,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     function showSelectedApiSection(selectedApi) {
         // 隱藏所有 API 區段
-        const apiSections = ['openai-section', 'claude-section', 'gemini-section'];
+        const apiSections = ['openai-section', 'claude-section', 'gemini-section', 'openrouter-section', 'ollama-section'];
         apiSections.forEach(sectionId => {
             const section = document.getElementById(sectionId);
             if (section) {
@@ -232,7 +288,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             const apiNames = {
                 openai: 'OpenAI',
                 claude: 'Claude',
-                gemini: 'Gemini'
+                gemini: 'Gemini',
+                openrouter: 'OpenRouter',
+                ollama: 'Ollama'
             };
             const titleElement = document.getElementById('api-section-title');
             if (titleElement) {
@@ -263,7 +321,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
 
-        if (!apiKeys[selectedApi]) {
+        if (!apiKeys[selectedApi] && selectedApi !== 'ollama') {
             showStatus(`請輸入 ${selectedApi.toUpperCase()} 的 API Key`, 'error');
             return;
         }
@@ -298,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         const selectedApi = document.querySelector('input[name="api"]:checked')?.value;
         const apiKey = apiInputs[selectedApi]?.value;
 
-        if (!selectedApi || !apiKey) {
+        if (!selectedApi || (!apiKey && selectedApi !== 'ollama')) {
             showStatus('請先選擇 API 並輸入 API Key', 'error');
             return;
         }
@@ -324,13 +382,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 
     function showStatus(message, type) {
+        // 清除任何現有的計時器
+        if (statusMessage.timeoutId) {
+            clearTimeout(statusMessage.timeoutId);
+        }
+        
+        // 設置訊息內容和樣式
         statusMessage.textContent = message;
         statusMessage.className = `status-message ${type}`;
         
-        if (type !== 'info') {
-            setTimeout(() => {
-                statusMessage.className = 'status-message';
-            }, 5000);
+        // 對於錯誤訊息，延長顯示時間
+        const displayDuration = type === 'error' ? 10000 : (type === 'info' ? 0 : 6000);
+        
+        if (displayDuration > 0) {
+            statusMessage.timeoutId = setTimeout(() => {
+                // 淡出動畫
+                statusMessage.style.opacity = '0';
+                statusMessage.style.transform = 'translateY(-10px)';
+                
+                setTimeout(() => {
+                    statusMessage.className = 'status-message';
+                    statusMessage.textContent = '';
+                    statusMessage.style.opacity = '';
+                    statusMessage.style.transform = '';
+                }, 300); // 等待動畫完成
+            }, displayDuration);
         }
     }
 

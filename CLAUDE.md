@@ -18,12 +18,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Chrome Extension (Manifest v3) that provides AI-powered webpage translation using three major AI services.
+This is a Chrome Extension (Manifest v3) that provides AI-powered webpage translation using five AI services including local AI.
 
 ### Core Architecture Components
 
 **Background Service Worker (`js/background.js`)**
-- Handles all API communications with OpenAI, Claude, and Gemini
+- Handles all API communications with OpenAI, Claude, Gemini, OpenRouter, and Ollama
 - Centralized translation logic with error handling
 - API connection testing functionality
 - Message routing between content script and options page
@@ -37,7 +37,7 @@ This is a Chrome Extension (Manifest v3) that provides AI-powered webpage transl
 
 **Options Page (`options.html` + `js/options.js`)**
 - Dynamic UI that shows only selected API service's settings
-- Supports 26+ AI models across all three services
+- Supports 55+ AI models across all five services
 - Model categorization (fast/balanced/powerful)
 - API key management with visibility toggles
 
@@ -67,7 +67,7 @@ This is a Chrome Extension (Manifest v3) that provides AI-powered webpage transl
 Chrome Storage Sync stores:
 ```javascript
 {
-  selectedApi: 'openai'|'claude'|'gemini',
+  selectedApi: 'openai'|'claude'|'gemini'|'openrouter'|'ollama',
   apiKeys: { [service]: 'key_value' },
   selectedModel: 'model_identifier',
   targetLanguage: 'zh-TW'|'en'|'ja'|etc,
@@ -82,11 +82,15 @@ Chrome Storage Sync stores:
 - OpenAI: `gpt-4o-mini`  
 - Claude: `claude-3-5-haiku-20241022`
 - Gemini: `gemini-2.5-flash`
+- OpenRouter: `deepseek/deepseek-r1-distill-llama-70b:free`
+- Ollama: `llama3.1:8b`
 
 **API Authentication:**
 - OpenAI: Bearer token in Authorization header
 - Claude: x-api-key header + anthropic-version
 - Gemini: API key as URL parameter
+- OpenRouter: Bearer token in Authorization header + HTTP-Referer and X-Title headers
+- Ollama: No authentication required (localhost only)
 
 ### Chrome Extension Permissions
 
@@ -94,7 +98,7 @@ Required permissions in manifest.json:
 - `activeTab`: Access current page content
 - `storage`: Persist settings
 - `scripting`: Inject content scripts
-- Host permissions for all three AI service APIs
+- Host permissions for all five AI service APIs (including localhost for Ollama)
 
 ### Styling Architecture
 

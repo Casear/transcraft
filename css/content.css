@@ -1,5 +1,6 @@
 /* 翻譯區塊樣式 */
 .ai-translation-block {
+  display: block !important;
   margin-top: 8px;
   padding: 8px 12px;
   background-color: rgba(239, 178, 60, 0.08);
@@ -8,6 +9,9 @@
   font-style: italic;
   line-height: 1.6;
   border-radius: 0 4px 4px 0;
+  clear: both;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* 標題的翻譯樣式 */
@@ -216,11 +220,16 @@
 }
 
 .loading-icon {
-  animation: rotate 2s linear infinite;
+  animation: rotate 1.5s linear infinite;
+  display: none !important; /* Ensure proper hide/show control */
+}
+
+.loading-icon.show {
+  display: block !important;
 }
 
 .progress-ring {
-  stroke: rgba(255, 255, 255, 0.3);
+  stroke: rgba(255, 255, 255, 0.2);
 }
 
 .progress-ring-fill {
@@ -228,6 +237,7 @@
   transform: rotate(-90deg);
   transform-origin: center;
   transition: stroke-dashoffset 0.3s ease;
+  stroke-linecap: round;
 }
 
 .progress-text {
