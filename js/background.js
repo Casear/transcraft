@@ -147,11 +147,28 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
     let errorMessage = 'OpenAI API error';
     try {
       const error = await response.json();
-      errorMessage = error.error?.message || error.message || `OpenAI API error (${response.status})`;
       console.error('OpenAI API error details:', JSON.stringify(error, null, 2));
+      
+      const originalError = error.error?.message || error.message;
+      
+      if (response.status === 429) {
+        errorMessage = `OpenAI API 請求頻率過高，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 401) {
+        errorMessage = `OpenAI API Key 無效或已過期${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 402 || response.status === 403) {
+        errorMessage = `OpenAI API 餘額不足或權限不足${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 503) {
+        errorMessage = `OpenAI 服務暫時不可用，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else {
+        errorMessage = originalError || `OpenAI API error (${response.status})`;
+      }
     } catch (parseError) {
       console.error('Failed to parse OpenAI error response:', parseError);
-      errorMessage = `OpenAI API error (${response.status}: ${response.statusText})`;
+      if (response.status === 429) {
+        errorMessage = 'OpenAI API 請求頻率過高，請稍後再試';
+      } else {
+        errorMessage = `OpenAI API error (${response.status}: ${response.statusText})`;
+      }
     }
     throw new Error(errorMessage);
   }
@@ -206,11 +223,29 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
     let errorMessage = 'Claude API error';
     try {
       const error = await response.json();
-      errorMessage = error.error?.message || error.message || `Claude API error (${response.status})`;
       console.error('Claude API error details:', JSON.stringify(error, null, 2));
+      
+      // 檢查特定的錯誤類型
+      const originalError = error.error?.message || error.message;
+      
+      if (response.status === 429) {
+        errorMessage = `Claude API 請求頻率過高，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 401) {
+        errorMessage = `Claude API Key 無效或已過期${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 402 || response.status === 403) {
+        errorMessage = `Claude API 餘額不足或權限不足${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 503) {
+        errorMessage = `Claude 服務暫時不可用，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else {
+        errorMessage = originalError || `Claude API error (${response.status})`;
+      }
     } catch (parseError) {
       console.error('Failed to parse Claude error response:', parseError);
-      errorMessage = `Claude API error (${response.status}: ${response.statusText})`;
+      if (response.status === 429) {
+        errorMessage = 'Claude API 請求頻率過高，請稍後再試';
+      } else {
+        errorMessage = `Claude API error (${response.status}: ${response.statusText})`;
+      }
     }
     throw new Error(errorMessage);
   }
@@ -269,11 +304,28 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
     let errorMessage = 'Gemini API error';
     try {
       const error = await response.json();
-      errorMessage = error.error?.message || error.message || `Gemini API error (${response.status})`;
       console.error('Gemini API error details:', JSON.stringify(error, null, 2));
+      
+      const originalError = error.error?.message || error.message;
+      
+      if (response.status === 429) {
+        errorMessage = `Gemini API 請求頻率過高，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 401) {
+        errorMessage = `Gemini API Key 無效或已過期${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 402 || response.status === 403) {
+        errorMessage = `Gemini API 餘額不足或權限不足${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (response.status === 503) {
+        errorMessage = `Gemini 服務暫時不可用，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else {
+        errorMessage = originalError || `Gemini API error (${response.status})`;
+      }
     } catch (parseError) {
       console.error('Failed to parse Gemini error response:', parseError);
-      errorMessage = `Gemini API error (${response.status}: ${response.statusText})`;
+      if (response.status === 429) {
+        errorMessage = 'Gemini API 請求頻率過高，請稍後再試';
+      } else {
+        errorMessage = `Gemini API error (${response.status}: ${response.statusText})`;
+      }
     }
     throw new Error(errorMessage);
   }
@@ -334,11 +386,47 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
     let errorMessage = 'OpenRouter API error';
     try {
       const error = await response.json();
-      errorMessage = error.error?.message || error.message || `OpenRouter API error (${response.status})`;
       console.error('OpenRouter API error details:', JSON.stringify(error, null, 2));
+      
+      // 檢查特定的錯誤類型並提供友好的錯誤訊息
+      const originalError = error.error?.message || error.message;
+      
+      if (error.error?.code === 429 || response.status === 429) {
+        // 速率限制錯誤
+        const metadata = error.error?.metadata;
+        if (metadata?.raw) {
+          // 包含具體的速率限制信息
+          if (metadata.raw.includes('temporarily rate-limited upstream')) {
+            const modelName = metadata.raw.match(/(\S+) is temporarily/)?.[1] || '模型';
+            errorMessage = `${modelName}暫時被上游限制，請稍後再試或使用其他模型\n詳細：${metadata.raw}`;
+          } else if (metadata.raw.includes('rate-limited')) {
+            errorMessage = `請求頻率過高，請稍後再試\n詳細：${metadata.raw}`;
+          } else {
+            errorMessage = `速率限制：${metadata.raw}`;
+          }
+        } else {
+          errorMessage = `請求頻率過高，請稍後再試或切換到其他模型${originalError ? `\n錯誤：${originalError}` : ''}`;
+        }
+      } else if (error.error?.code === 401 || response.status === 401) {
+        // 認證錯誤
+        errorMessage = `OpenRouter API Key 無效或已過期${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (error.error?.code === 402 || response.status === 402) {
+        // 付費相關錯誤
+        errorMessage = `OpenRouter 餘額不足，請充值或使用免費模型${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else if (error.error?.code === 503 || response.status === 503) {
+        // 服務不可用
+        errorMessage = `OpenRouter 服務暫時不可用，請稍後再試${originalError ? `\n錯誤：${originalError}` : ''}`;
+      } else {
+        // 其他錯誤，使用原始錯誤訊息
+        errorMessage = originalError || `OpenRouter API error (${response.status})`;
+      }
     } catch (parseError) {
       console.error('Failed to parse OpenRouter error response:', parseError);
-      errorMessage = `OpenRouter API error (${response.status}: ${response.statusText})`;
+      if (response.status === 429) {
+        errorMessage = '請求頻率過高，請稍後再試';
+      } else {
+        errorMessage = `OpenRouter API error (${response.status}: ${response.statusText})`;
+      }
     }
     throw new Error(errorMessage);
   }
