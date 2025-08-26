@@ -14,6 +14,68 @@
   box-sizing: border-box;
 }
 
+/* 載入中的翻譯區塊 */
+.ai-translation-block.loading {
+  color: #999;
+  font-style: normal;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-translation-block.loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(239, 178, 60, 0.1),
+    transparent
+  );
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* 載入中的文字 */
+.ai-translation-loading-text {
+  color: #999;
+  font-size: 0.9em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 載入中的旋轉圓圈 */
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(239, 178, 60, 0.2);
+  border-top-color: #EFB23C;
+  border-radius: 50%;
+  animation: loading-spin 0.8s linear infinite;
+}
+
+@keyframes loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 標題的翻譯樣式 */
 .ai-translation-heading {
   font-size: 0.85em;
@@ -437,5 +499,66 @@
   
   .error-message {
     font-size: 13px;
+  }
+}
+
+/* 自動翻譯開關樣式 */
+.auto-translate-toggle {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 2px solid #ccc;
+}
+
+.auto-translate-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 1);
+}
+
+.auto-translate-toggle.enabled {
+  background: #4CAF50;
+  border-color: #4CAF50;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.auto-translate-toggle.enabled:hover {
+  background: #45a049;
+  border-color: #45a049;
+  transform: scale(1.1);
+  box-shadow: 0 3px 12px rgba(76, 175, 80, 0.4);
+}
+
+.auto-translate-icon {
+  fill: #666;
+  transition: fill 0.3s ease;
+}
+
+.auto-translate-toggle.enabled .auto-translate-icon {
+  fill: white;
+}
+
+/* 手機版自動翻譯開關調整 */
+@media (max-width: 768px) {
+  .auto-translate-toggle {
+    width: 18px;
+    height: 18px;
+    bottom: -3px;
+    right: -3px;
+  }
+  
+  .auto-translate-icon {
+    width: 10px;
+    height: 10px;
   }
 }

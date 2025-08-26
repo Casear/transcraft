@@ -2,34 +2,35 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #f5f5f5;
+    background-color: #1a1a1a;
+    color: #e0e0e0;
 }
 
 .container {
     max-width: 600px;
     margin: 40px auto;
     padding: 30px;
-    background: white;
+    background: #2d2d2d;
     border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
 }
 
 h1 {
-    color: #333;
+    color: #f0f0f0;
     margin-bottom: 30px;
     text-align: center;
 }
 
 h2 {
-    color: #555;
+    color: #d0d0d0;
     font-size: 18px;
     margin-bottom: 15px;
-    border-bottom: 2px solid #eee;
+    border-bottom: 2px solid #404040;
     padding-bottom: 10px;
 }
 
 h3 {
-    color: #666;
+    color: #c0c0c0;
     font-size: 16px;
     margin-bottom: 10px;
 }
@@ -49,19 +50,22 @@ h3 {
     align-items: center;
     cursor: pointer;
     padding: 10px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid #404040;
     border-radius: 8px;
     transition: all 0.3s;
+    background: #383838;
+    color: #e0e0e0;
 }
 
 .radio-group label:hover {
-    border-color: #EFB23C;
-    background-color: #f9f9f9;
+    border-color: #2c3e50;
+    background-color: #444444;
 }
 
 .radio-group input[type="radio"]:checked + label {
-    border-color: #EFB23C;
-    background-color: #fdf4e8;
+    border-color: #2c3e50;
+    background-color: #34495e;
+    color: #ffffff;
 }
 
 .radio-group input[type="radio"] {
@@ -69,7 +73,7 @@ h3 {
 }
 
 .section-description {
-    color: #666;
+    color: #a0a0a0;
     font-size: 14px;
     margin-bottom: 20px;
     font-style: italic;
@@ -77,26 +81,26 @@ h3 {
 
 .api-section {
     padding: 20px;
-    border: 2px solid #e8f4f8;
+    border: 2px solid #404040;
     border-radius: 12px;
     margin-bottom: 15px;
-    background: linear-gradient(135deg, #f8fbff 0%, #f0f8ff 100%);
+    background: linear-gradient(135deg, #3a3a3a 0%, #353535 100%);
     transition: all 0.3s ease;
 }
 
 .api-section:hover {
-    border-color: #EFB23C;
+    border-color: #2c3e50;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(239, 178, 60, 0.15);
+    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.15);
 }
 
 
 .no-service-selected {
     text-align: center;
     padding: 40px;
-    color: #999;
-    background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
-    border: 2px dashed #ddd;
+    color: #888;
+    background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+    border: 2px dashed #505050;
     border-radius: 12px;
     margin-bottom: 20px;
 }
@@ -115,9 +119,9 @@ h3 {
 .no-model-available {
     text-align: center;
     padding: 30px;
-    color: #999;
-    background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
-    border: 2px dashed #ddd;
+    color: #888;
+    background: linear-gradient(135deg, #2a2a2a 0%, #252525 100%);
+    border: 2px dashed #505050;
     border-radius: 12px;
     margin-bottom: 20px;
 }
@@ -130,11 +134,11 @@ h3 {
 .model-info {
     margin-top: 12px;
     padding: 12px;
-    background: rgba(76, 175, 80, 0.05);
-    border: 1px solid rgba(76, 175, 80, 0.2);
+    background: rgba(44, 62, 80, 0.1);
+    border: 1px solid rgba(44, 62, 80, 0.3);
     border-radius: 6px;
     font-size: 13px;
-    color: #2e7d32;
+    color: #7fb3d3;
 }
 
 .model-card {
@@ -157,43 +161,46 @@ h3 {
 }
 
 .model-badge.fast {
-    background-color: #e8f5e8;
-    color: #2e7d32;
+    background-color: #2d5a2d;
+    color: #81c784;
 }
 
 .model-badge.balanced {
-    background-color: #fff3e0;
-    color: #ef6c00;
+    background-color: #4a3c2a;
+    color: #ffb74d;
 }
 
 .model-badge.powerful {
-    background-color: #fdf4e8;
-    color: #d89e2a;
+    background-color: #4a4229;
+    color: #ffd54f;
 }
 
-input[type="password"], select {
+input[type="password"], input[type="text"], input[type="number"], select {
     width: 100%;
     padding: 10px;
     font-size: 14px;
-    border: 1px solid #ddd;
+    border: 1px solid #505050;
     border-radius: 5px;
     box-sizing: border-box;
     margin-bottom: 10px;
+    background: #3a3a3a;
+    color: #e0e0e0;
 }
 
-input[type="password"]:focus, select:focus {
+input[type="password"]:focus, input[type="text"]:focus, input[type="number"]:focus, select:focus {
     outline: none;
-    border-color: #EFB23C;
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.3);
 }
 
 .help-text {
     font-size: 12px;
-    color: #666;
+    color: #a0a0a0;
     margin-top: 5px;
 }
 
 .help-text a {
-    color: #EFB23C;
+    color: #5dade2;
     text-decoration: none;
 }
 
@@ -208,7 +215,7 @@ input[type="password"]:focus, select:focus {
 .form-group label {
     display: block;
     margin-bottom: 5px;
-    color: #555;
+    color: #c0c0c0;
     font-weight: 500;
 }
 
@@ -229,22 +236,22 @@ input[type="password"]:focus, select:focus {
 }
 
 .primary-button {
-    background-color: #EFB23C;
+    background-color: #2c3e50;
     color: white;
     flex: 1;
 }
 
 .primary-button:hover {
-    background-color: #e5a328;
+    background-color: #34495e;
 }
 
 .secondary-button {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: #404040;
+    color: #e0e0e0;
 }
 
 .secondary-button:hover {
-    background-color: #e0e0e0;
+    background-color: #505050;
 }
 
 .status-message {
@@ -264,27 +271,27 @@ input[type="password"]:focus, select:focus {
 }
 
 .status-message.success {
-    background-color: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background-color: #2d5a2d;
+    color: #81c784;
+    border: 1px solid #4a7c59;
     opacity: 1;
     transform: translateY(0);
 }
 
 .status-message.error {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background-color: #4a2c2c;
+    color: #ef9a9a;
+    border: 1px solid #6d4c4c;
     opacity: 1;
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
-    border-left: 4px solid #dc3545;
+    box-shadow: 0 2px 8px rgba(239, 83, 80, 0.15);
+    border-left: 4px solid #e57373;
 }
 
 .status-message.info {
-    background-color: #d1ecf1;
-    color: #0c5460;
-    border: 1px solid #bee5eb;
+    background-color: #2c4a5a;
+    color: #81d4fa;
+    border: 1px solid #4a6c7c;
     opacity: 1;
     transform: translateY(0);
 }
@@ -299,17 +306,17 @@ input[type="password"]:focus, select:focus {
     align-items: center;
     justify-content: space-between;
     padding: 15px;
-    border: 2px solid #e8f4f8;
+    border: 2px solid #404040;
     border-radius: 8px;
     margin-bottom: 10px;
-    background: linear-gradient(135deg, #f8fbff 0%, #f0f8ff 100%);
+    background: linear-gradient(135deg, #3a3a3a 0%, #353535 100%);
     transition: all 0.3s ease;
 }
 
 .expert-mode-item:hover {
-    border-color: #EFB23C;
+    border-color: #2c3e50;
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(239, 178, 60, 0.15);
+    box-shadow: 0 2px 6px rgba(44, 62, 80, 0.15);
 }
 
 .expert-mode-info {
@@ -318,25 +325,25 @@ input[type="password"]:focus, select:focus {
 
 .expert-mode-title {
     font-weight: 600;
-    color: #333;
+    color: #e0e0e0;
     margin-bottom: 5px;
 }
 
 .expert-mode-description {
     font-size: 14px;
-    color: #666;
+    color: #a0a0a0;
     margin-bottom: 5px;
 }
 
 .expert-mode-id {
     font-size: 12px;
-    color: #999;
+    color: #888;
     font-family: monospace;
 }
 
 .expert-mode-default-badge {
-    background-color: #fdf4e8;
-    color: #d89e2a;
+    background-color: #4a4229;
+    color: #ffd54f;
     padding: 2px 6px;
     border-radius: 4px;
     font-size: 11px;
@@ -359,26 +366,26 @@ input[type="password"]:focus, select:focus {
 }
 
 .expert-mode-edit-btn {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: #404040;
+    color: #e0e0e0;
 }
 
 .expert-mode-edit-btn:hover {
-    background-color: #e0e0e0;
+    background-color: #505050;
 }
 
 .expert-mode-delete-btn {
-    background-color: #ffebee;
-    color: #c62828;
+    background-color: #4a2c2c;
+    color: #ef9a9a;
 }
 
 .expert-mode-delete-btn:hover {
-    background-color: #ffcdd2;
+    background-color: #6d4c4c;
 }
 
 .expert-mode-delete-btn:disabled {
-    background-color: #f5f5f5;
-    color: #999;
+    background-color: #2a2a2a;
+    color: #666;
     cursor: not-allowed;
 }
 
@@ -389,7 +396,7 @@ input[type="password"]:focus, select:focus {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
     z-index: 1000;
     display: flex;
     align-items: center;
@@ -397,13 +404,13 @@ input[type="password"]:focus, select:focus {
 }
 
 .modal-content {
-    background: white;
+    background: #2d2d2d;
     border-radius: 10px;
     width: 90%;
     max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 .modal-header {
@@ -411,12 +418,13 @@ input[type="password"]:focus, select:focus {
     justify-content: between;
     align-items: center;
     padding: 20px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #404040;
 }
 
 .modal-header h3 {
     margin: 0;
     flex: 1;
+    color: #e0e0e0;
 }
 
 .modal-close {
@@ -424,7 +432,7 @@ input[type="password"]:focus, select:focus {
     border: none;
     font-size: 24px;
     cursor: pointer;
-    color: #999;
+    color: #a0a0a0;
     padding: 0;
     width: 30px;
     height: 30px;
@@ -436,8 +444,8 @@ input[type="password"]:focus, select:focus {
 }
 
 .modal-close:hover {
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: #404040;
+    color: #e0e0e0;
 }
 
 .modal-body {
@@ -449,22 +457,25 @@ input[type="password"]:focus, select:focus {
     justify-content: flex-end;
     gap: 10px;
     padding: 20px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid #404040;
 }
 
 .modal input[type="text"], .modal textarea {
     width: 100%;
     padding: 10px;
     font-size: 14px;
-    border: 1px solid #ddd;
+    border: 1px solid #505050;
     border-radius: 5px;
     box-sizing: border-box;
     margin-bottom: 5px;
+    background: #3a3a3a;
+    color: #e0e0e0;
 }
 
 .modal input[type="text"]:focus, .modal textarea:focus {
     outline: none;
-    border-color: #EFB23C;
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.3);
 }
 
 .modal textarea {
@@ -474,8 +485,8 @@ input[type="password"]:focus, select:focus {
 
 /* 批次設定樣式 */
 .batch-info {
-    background-color: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background-color: #3a3a3a;
+    border: 1px solid #505050;
     border-radius: 5px;
     padding: 15px;
     margin-top: 10px;
@@ -484,7 +495,7 @@ input[type="password"]:focus, select:focus {
 .info-item {
     margin-bottom: 8px;
     font-size: 14px;
-    color: #666;
+    color: #a0a0a0;
 }
 
 .info-item:last-child {
@@ -492,20 +503,22 @@ input[type="password"]:focus, select:focus {
 }
 
 .info-item strong {
-    color: #333;
+    color: #e0e0e0;
 }
 
 #max-batch-length, #max-batch-elements {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid #505050;
     border-radius: 4px;
     font-size: 14px;
     margin-bottom: 5px;
+    background: #3a3a3a;
+    color: #e0e0e0;
 }
 
 #max-batch-length:focus, #max-batch-elements:focus {
     outline: none;
-    border-color: #EFB23C;
-    box-shadow: 0 0 0 2px rgba(239, 178, 60, 0.2);
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.3);
 }

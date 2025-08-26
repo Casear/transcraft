@@ -6,6 +6,8 @@ let floatingButton = null;
 let isTranslating = false;
 let isLanguageMenuOpen = false;
 let debugMode = false;
+let autoTranslateEnabled = false;
+let currentDomain = window.location.hostname;
 
 // Debug logging utility
 function debugLog(...args) {
@@ -26,12 +28,17 @@ function debugError(...args) {
   }
 }
 
-// Initialize debug mode from storage
-chrome.storage.sync.get(['debugMode'], (result) => {
+// Initialize settings from storage
+chrome.storage.sync.get(['debugMode', 'autoTranslateDomains'], (result) => {
   debugMode = result.debugMode || false;
   if (debugMode) {
     console.log('[TransCraft Debug] Debug mode is ENABLED');
   }
+  
+  // Check if auto-translate is enabled for current domain
+  const autoTranslateDomains = result.autoTranslateDomains || {};
+  autoTranslateEnabled = autoTranslateDomains[currentDomain] || false;
+  debugLog('Auto-translate for', currentDomain, ':', autoTranslateEnabled);
 });
 
 // Listen for debug mode changes
@@ -45,6 +52,80 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     }
   }
 });
+
+// Save auto-translate state for current domain
+async function saveAutoTranslateState(enabled) {
+  const result = await chrome.storage.sync.get(['autoTranslateDomains']);
+  const autoTranslateDomains = result.autoTranslateDomains || {};
+  
+  if (enabled) {
+    autoTranslateDomains[currentDomain] = true;
+  } else {
+    delete autoTranslateDomains[currentDomain];
+  }
+  
+  await chrome.storage.sync.set({ autoTranslateDomains });
+  debugLog('Auto-translate state saved for', currentDomain, ':', enabled);
+}
+
+// Toggle auto-translate for current domain
+async function toggleAutoTranslate() {
+  autoTranslateEnabled = !autoTranslateEnabled;
+  await saveAutoTranslateState(autoTranslateEnabled);
+  updateAutoTranslateButton();
+  
+  debugLog('Auto-translate toggled for', currentDomain, ':', autoTranslateEnabled);
+  
+  // Show status message
+  const status = autoTranslateEnabled ? '已開啟' : '已關閉';
+  showFloatingMessage(`自動翻譯${status}`);
+}
+
+// 顯示浮動消息
+function showFloatingMessage(message, duration = 2000) {
+  // 創建消息元素
+  const messageEl = document.createElement('div');
+  messageEl.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 999999;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 300px;
+    word-wrap: break-word;
+  `;
+  messageEl.textContent = message;
+  
+  // 添加到頁面
+  document.body.appendChild(messageEl);
+  
+  // 觸發動畫
+  setTimeout(() => {
+    messageEl.style.opacity = '1';
+    messageEl.style.transform = 'translateY(0)';
+  }, 10);
+  
+  // 自動移除
+  setTimeout(() => {
+    messageEl.style.opacity = '0';
+    messageEl.style.transform = 'translateY(-10px)';
+    setTimeout(() => {
+      if (messageEl.parentNode) {
+        messageEl.parentNode.removeChild(messageEl);
+      }
+    }, 300);
+  }, duration);
+}
 
 function getTranslatableElements() {
   // 取得所有包含文字的區塊級元素
@@ -363,6 +444,17 @@ async function translatePage() {
   const maxBatchElements = batchSettings.maxBatchElements || 20; // 預設最大20個元素
   const requestTimeout = (batchSettings.requestTimeout || 60) * 1000; // 轉換為毫秒，預設60秒
   
+  // 先為所有元素添加載入佔位符
+  const elementIdMap = new Map(); // 儲存元素和其ID的對應關係
+  elements.forEach(element => {
+    const elementId = addLoadingPlaceholder(element);
+    if (elementId) {
+      elementIdMap.set(element, elementId);
+    }
+  });
+  
+  debugLog(`Added ${elementIdMap.size} loading placeholders`);
+  
   let successCount = 0;
   let processedElements = 0;
   let errors = []; // 收集所有錯誤，最後統一顯示
@@ -378,7 +470,14 @@ async function translatePage() {
     // 動態決定批次大小
     for (let i = processedElements; i < elements.length && batch.length < maxBatchElements; i++) {
       const element = elements[i];
-      const text = element.innerText.trim();
+      
+      // 獲取文本時排除翻譯區塊的內容
+      let text = '';
+      const tempElement = element.cloneNode(true);
+      // 移除所有翻譯區塊
+      const translationBlocks = tempElement.querySelectorAll('.ai-translation-block');
+      translationBlocks.forEach(block => block.remove());
+      text = tempElement.innerText.trim();
       
       batchProcessedCount++; // 記錄檢查過的元素數量
       
@@ -441,36 +540,43 @@ async function translatePage() {
           debugLog(`批次處理: 原始元素 ${validElements.length} 個, 翻譯結果 ${translations.length} 個`);
           debugLog('翻譯段落:', translations)
           
-          // 為每個元素添加翻譯
+          // 更新載入佔位符為實際翻譯
           const maxIndex = Math.min(validElements.length, translations.length);
           for (let index = 0; index < maxIndex; index++) {
             const element = validElements[index];
             const translation = translations[index];
+            const elementId = elementIdMap.get(element);
             
-            if (translation && translation.trim()) {
+            if (translation && translation.trim() && elementId) {
               const cleanedTranslation = translation.trim();
-              addTranslationToElement(element, cleanedTranslation);
-              successCount++;
+              if (updatePlaceholderWithTranslation(elementId, cleanedTranslation)) {
+                successCount++;
+              } else {
+                // 如果更新失敗，移除佔位符
+                removeLoadingPlaceholder(elementId);
+                debugWarn(`Failed to update translation for element ${index}`);
+              }
             } else {
-              console.warn(`元素 ${index} 的翻譯為空`);
+              if (elementId) {
+                removeLoadingPlaceholder(elementId);
+              }
+              debugWarn(`元素 ${index} 的翻譯為空`);
             }
           }
           
           // 處理翻譯數量不匹配的情況
           if (translations.length < validElements.length) {
-            console.warn(`翻譯數量不足: 需要 ${validElements.length} 個，得到 ${translations.length} 個`);
-            // 如果只有一個翻譯但有多個元素，嘗試將翻譯分配給第一個元素
-            if (translations.length === 1 && validElements.length > 1) {
-              console.log('嘗試將單個翻譯分配給第一個元素');
-              const firstElement = validElements[0];
-              const singleTranslation = translations[0].trim();
-              if (singleTranslation && !firstElement.querySelector('.ai-translation-block')) {
-                addTranslationToElement(firstElement, singleTranslation);
-                successCount++;
+            debugWarn(`翻譯數量不足: 需要 ${validElements.length} 個，得到 ${translations.length} 個`);
+            // 移除未獲得翻譯的元素的佔位符
+            for (let index = translations.length; index < validElements.length; index++) {
+              const element = validElements[index];
+              const elementId = elementIdMap.get(element);
+              if (elementId) {
+                removeLoadingPlaceholder(elementId);
               }
             }
           } else if (translations.length > validElements.length) {
-            console.warn(`翻譯數量過多: 需要 ${validElements.length} 個，得到 ${translations.length} 個`);
+            debugWarn(`翻譯數量過多: 需要 ${validElements.length} 個，得到 ${translations.length} 個`);
           }
         }
       } catch (error) {
@@ -483,7 +589,8 @@ async function translatePage() {
             errorMsg.includes('餘額不足') || errorMsg.includes('權限不足') ||
             errorMsg.includes('服務暫時不可用') || errorMsg.includes('配額') ||
             errorMsg.includes('quota') || errorMsg.includes('exceeded') ||
-            errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out')) {
+            errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out') ||
+            errorMsg.includes('token 限制') || errorMsg.includes('安全原因')) {
           console.warn('Batch translation known issue:', errorMsg);
         } else {
           console.error('Batch translation unexpected error:', error);
@@ -493,6 +600,11 @@ async function translatePage() {
         if (errorMsg === 'EXTENSION_CONTEXT_INVALID' || 
             errorMsg === 'API_KEY_ERROR' || 
             errorMsg.includes('No endpoints found matching your data policy')) {
+          
+          // 移除所有載入佔位符
+          for (const [element, elementId] of elementIdMap.entries()) {
+            removeLoadingPlaceholder(elementId);
+          }
           
           isTranslating = false;
           
@@ -545,6 +657,14 @@ async function translatePage() {
           errorTitle = 'AI 翻譯服務暫時中斷';
           errorDetail = 'API 服務商的伺服器暫時無法提供服務，這通常是臨時性問題。';
           errorSolution = '請等待幾分鐘後重試，或切換到其他 AI 服務';
+        } else if (errorMsg.includes('token 限制')) {
+          errorTitle = '翻譯內容超過長度限制';
+          errorDetail = '當前批次的內容太長，超過了 AI 模型的處理能力上限。';
+          errorSolution = '請到設定中減少「批次最大字元數」或「批次最大元素數」，建議設為 4000 字元或 10 個元素';
+        } else if (errorMsg.includes('安全原因')) {
+          errorTitle = '內容被安全系統阻擋';
+          errorDetail = 'AI 服務的安全系統認為此內容可能包含不適當的內容。';
+          errorSolution = '請檢查頁面內容，或嘗試使用其他翻譯服務';
         } else if (errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out')) {
           // 從錯誤訊息中提取 timeout 時間，如果無法提取則使用預設值
           const timeoutMatch = errorMsg.match(/after (\d+) seconds/);
@@ -585,11 +705,32 @@ async function translatePage() {
             extractedInfo = 'API 金鑰可能有問題';
           } else if (errorMsg.includes('quota') || errorMsg.includes('limit')) {
             extractedInfo = 'API 使用額度可能已達上限';
+          } else if (errorMsg.includes('token 限制')) {
+            extractedInfo = '翻譯內容過長，超出模型處理限制';
+          } else if (errorMsg.includes('安全原因')) {
+            extractedInfo = '內容被 AI 安全系統阻擋';
           }
           
           errorTitle = displayMessage;
           errorDetail = extractedInfo || errorMsg.substring(0, 100);
           errorSolution = '請重新嘗試，若問題持續請聯繫技術支援';
+        }
+        
+        // 移除當前批次的載入佔位符
+        for (const element of validElements) {
+          const elementId = elementIdMap.get(element);
+          if (elementId) {
+            removeLoadingPlaceholder(elementId);
+          }
+        }
+        
+        // 移除所有剩餘的載入佔位符
+        for (let i = processedElements + batchProcessedCount; i < elements.length; i++) {
+          const element = elements[i];
+          const elementId = elementIdMap.get(element);
+          if (elementId) {
+            removeLoadingPlaceholder(elementId);
+          }
         }
         
         // 立即顯示錯誤並停止翻譯
@@ -638,6 +779,90 @@ async function translatePage() {
     showErrorModal('部分內容未翻譯', 
       `成功翻譯 ${successCount} 個元素，${failedCount} 個元素翻譯失敗。<br>可能是因為網路問題或 API 限制。`, 
       4000);
+  }
+}
+
+// 添加載入中的佔位符
+function addLoadingPlaceholder(element) {
+  // 檢查是否已經有翻譯區塊
+  if (element.querySelector(':scope > .ai-translation-block')) {
+    return null;
+  }
+  
+  // 創建載入中的區塊
+  const loadingDiv = document.createElement('div');
+  loadingDiv.className = 'ai-translation-block loading';
+  loadingDiv.innerHTML = '<span class="ai-translation-loading-text">翻譯中 <span class="loading-spinner"></span></span>';
+  
+  // 添加唯一識別符
+  const elementId = `translation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  loadingDiv.setAttribute('data-element-id', elementId);
+  element.setAttribute('data-translation-id', elementId);
+  
+  // 根據元素類型調整樣式
+  const tagName = element.tagName;
+  if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(tagName)) {
+    loadingDiv.classList.add('ai-translation-heading');
+  } else if (tagName === 'LI') {
+    loadingDiv.classList.add('ai-translation-list-item');
+  } else if (['TD', 'TH'].includes(tagName)) {
+    loadingDiv.classList.add('ai-translation-table-cell');
+  }
+  
+  // 確保翻譯顯示在原文下方
+  const computedStyle = window.getComputedStyle(element);
+  if (computedStyle.display === 'inline') {
+    element.style.display = 'inline-block';
+  }
+  
+  try {
+    element.appendChild(loadingDiv);
+    translationElements.set(loadingDiv, element);
+    return elementId;
+  } catch (error) {
+    debugError('Failed to add loading placeholder:', error);
+    return null;
+  }
+}
+
+// 更新載入佔位符為實際翻譯
+function updatePlaceholderWithTranslation(elementId, translationText) {
+  const element = document.querySelector(`[data-translation-id="${elementId}"]`);
+  const loadingDiv = document.querySelector(`.ai-translation-block[data-element-id="${elementId}"]`);
+  
+  if (!element || !loadingDiv) {
+    debugWarn('Cannot find element or loading div for ID:', elementId);
+    return false;
+  }
+  
+  // 移除 loading 類別
+  loadingDiv.classList.remove('loading');
+  
+  // 完全清空內容並設置新的翻譯文本
+  loadingDiv.innerHTML = ''; // 清空包括"翻譯中"和spinner的所有內容
+  loadingDiv.textContent = translationText.trim();
+  
+  // 確保沒有殘留的載入元素
+  const loadingElements = loadingDiv.querySelectorAll('.ai-translation-loading-text, .loading-spinner');
+  loadingElements.forEach(el => el.remove());
+  
+  debugLog('Updated translation for element:', element.tagName, 'Translation:', translationText.substring(0, 50) + '...');
+  return true;
+}
+
+// 移除載入佔位符（失敗時）
+function removeLoadingPlaceholder(elementId) {
+  const element = document.querySelector(`[data-translation-id="${elementId}"]`);
+  const loadingDiv = document.querySelector(`.ai-translation-block[data-element-id="${elementId}"]`);
+  
+  if (element) {
+    element.removeAttribute('data-translation-id');
+  }
+  
+  if (loadingDiv) {
+    translationElements.delete(loadingDiv);
+    loadingDiv.remove();
+    debugLog('Removed loading placeholder for failed translation');
   }
 }
 
@@ -893,6 +1118,13 @@ function createFloatingButton() {
           <path d="M7 10l5 5 5-5z" fill="white"/>
         </svg>
       </div>
+      
+      <!-- 自動翻譯開關 -->
+      <div class="auto-translate-toggle" id="auto-translate-toggle" title="自動翻譯開關">
+        <svg class="auto-translate-icon" viewBox="0 0 24 24" width="12" height="12">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM8 17.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM9.5 8c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5S9.5 8.83 9.5 8zm7 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </div>
     </div>
   `;
   
@@ -920,9 +1152,11 @@ function createFloatingButton() {
   // 添加事件監聽器
   const translateSection = document.getElementById('translate-section');
   const languageSection = document.getElementById('language-section');
+  const autoTranslateToggle = document.getElementById('auto-translate-toggle');
   
   translateSection.addEventListener('click', handleTranslateClick);
   languageSection.addEventListener('click', toggleLanguageMenu);
+  autoTranslateToggle.addEventListener('click', handleAutoTranslateToggle);
   
   // 語言選項點擊事件
   languageMenu.addEventListener('click', (e) => {
@@ -941,6 +1175,9 @@ function createFloatingButton() {
   
   // 設置初始語言
   loadTargetLanguage();
+  
+  // 設置初始自動翻譯狀態
+  updateAutoTranslateButton();
 }
 
 // 處理翻譯點擊
@@ -956,6 +1193,26 @@ async function handleTranslateClick(e) {
   }
   
   translatePage();
+}
+
+// 處理自動翻譯開關點擊
+async function handleAutoTranslateToggle(e) {
+  e.stopPropagation();
+  await toggleAutoTranslate();
+}
+
+// 更新自動翻譯按鈕狀態
+function updateAutoTranslateButton() {
+  const autoTranslateToggle = document.getElementById('auto-translate-toggle');
+  if (!autoTranslateToggle) return;
+  
+  if (autoTranslateEnabled) {
+    autoTranslateToggle.classList.add('enabled');
+    autoTranslateToggle.title = '自動翻譯已開啟 (點擊關閉)';
+  } else {
+    autoTranslateToggle.classList.remove('enabled');
+    autoTranslateToggle.title = '自動翻譯已關閉 (點擊開啟)';
+  }
 }
 
 // 更新浮動按鈕狀態
@@ -1138,6 +1395,62 @@ function initializeFloatingButton() {
 
 // 初始化
 initializeFloatingButton();
+
+// 自動翻譯邏輯
+async function checkAndAutoTranslate() {
+  if (!autoTranslateEnabled) return;
+  
+  debugLog('Auto-translate is enabled for', currentDomain, ', checking if page should be translated');
+  
+  // 等待一秒讓頁面加載完成
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // 檢查是否已經有API配置
+  const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys']);
+  if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
+    debugLog('No API configuration found, skipping auto-translate');
+    return;
+  }
+  
+  // 檢查頁面是否有可翻譯內容
+  const elements = getTranslatableElements();
+  if (elements.length === 0) {
+    debugLog('No translatable elements found, skipping auto-translate');
+    return;
+  }
+  
+  debugLog('Starting auto-translation for', elements.length, 'elements');
+  translatePage();
+}
+
+// 監聽頁面導航變化 (適用於SPA)
+let lastUrl = location.href;
+new MutationObserver(() => {
+  const url = location.href;
+  if (url !== lastUrl) {
+    lastUrl = url;
+    debugLog('Page navigation detected:', url);
+    
+    // 重置翻譯狀態
+    isTranslated = false;
+    translationElements.clear();
+    
+    // 如果還在同一個domain，檢查自動翻譯
+    if (location.hostname === currentDomain) {
+      checkAndAutoTranslate();
+    }
+  }
+}).observe(document, { subtree: true, childList: true });
+
+// 初始檢查自動翻譯
+window.addEventListener('load', () => {
+  checkAndAutoTranslate();
+});
+
+// 如果頁面已經加載完成，立即檢查
+if (document.readyState === 'complete') {
+  checkAndAutoTranslate();
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'toggleTranslation') {
