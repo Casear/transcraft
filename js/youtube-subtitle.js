@@ -244,6 +244,8 @@ class YouTubeSubtitleTranslator {
 
             } catch (error) {
                 console.error('Batch translation failed:', error);
+                // 顯示錯誤但繼續處理其他批次
+                this.showErrorNotification(`預載翻譯批次失敗: ${error.message}`);
             }
 
             // 更新進度
@@ -262,10 +264,34 @@ class YouTubeSubtitleTranslator {
 
     // 發送翻譯請求（Promise版本）
     sendTranslationRequest(message) {
-        return new Promise((resolve) => {
-            chrome.runtime.sendMessage(message, (response) => {
-                resolve(response);
-            });
+        return new Promise((resolve, reject) => {
+            try {
+                chrome.runtime.sendMessage(message, (response) => {
+                    // 檢查Chrome runtime錯誤
+                    if (chrome.runtime.lastError) {
+                        console.error('Chrome runtime error:', chrome.runtime.lastError);
+                        reject(new Error(chrome.runtime.lastError.message || 'EXTENSION_CONTEXT_INVALID'));
+                        return;
+                    }
+                    
+                    // 檢查響應是否有效
+                    if (!response) {
+                        reject(new Error('API_ERROR: No response received'));
+                        return;
+                    }
+                    
+                    // 檢查響應中是否有錯誤
+                    if (response.error) {
+                        reject(new Error(response.error));
+                        return;
+                    }
+                    
+                    resolve(response);
+                });
+            } catch (error) {
+                console.error('Error sending message:', error);
+                reject(error);
+            }
         });
     }
 
@@ -636,13 +662,32 @@ class YouTubeSubtitleTranslator {
 
         } catch (error) {
             console.error('Batch translation error:', error);
-            // 保存原文
+            
+            // 根據錯誤類型提供不同的處理
+            let errorMessage = error.message || 'Unknown error';
+            let fallbackText = '翻譯失敗';
+            
+            if (errorMessage.includes('EXTENSION_CONTEXT_INVALID')) {
+                fallbackText = '[需要重新載入擴展]';
+            } else if (errorMessage.includes('API_ERROR')) {
+                fallbackText = '[API 錯誤]';
+            } else if (errorMessage.includes('QUOTA_EXCEEDED')) {
+                fallbackText = '[API 配額不足]';
+            } else if (errorMessage.includes('NETWORK_ERROR')) {
+                fallbackText = '[網路連線錯誤]';
+            }
+            
+            // 保存失敗提示或原文
             batchToProcess.forEach(item => {
-                this.translatedSubtitles.set(item.text, item.text);
+                const displayText = `${item.text} ${fallbackText}`;
+                this.translatedSubtitles.set(item.text, displayText);
                 if (item.text === this.currentSubtitle) {
-                    this.showTranslatedSubtitle(item.text);
+                    this.showTranslatedSubtitle(displayText);
                 }
             });
+            
+            // 顯示錯誤通知
+            this.showErrorNotification(`批次翻譯失敗: ${errorMessage}`);
         }
     }
 
@@ -667,15 +712,17 @@ class YouTubeSubtitleTranslator {
             this.showTranslatingIndicator(text);
             this.showTranslatingStatus();
 
-            // 發送翻譯請求到背景腳本
-            chrome.runtime.sendMessage({
-                action: 'translate',
-                text: text,
-                targetLanguage: apiConfig.targetLanguage || 'zh-TW',
-                apiConfig: apiConfig,
-                expertMode: 'general',
-                source: 'youtube-subtitle'
-            }, (response) => {
+            // 使用改進的翻譯請求方法
+            try {
+                const response = await this.sendTranslationRequest({
+                    action: 'translate',
+                    text: text,
+                    targetLanguage: apiConfig.targetLanguage || 'zh-TW',
+                    apiConfig: apiConfig,
+                    expertMode: 'general',
+                    source: 'youtube-subtitle'
+                });
+
                 this.hideTranslatingStatus();
                 
                 if (response && response.translation) {
@@ -684,14 +731,34 @@ class YouTubeSubtitleTranslator {
                     this.showTranslatedSubtitle(response.translation);
                 } else {
                     console.warn('Translation failed, showing original text');
-                    this.showTranslatedSubtitle(text);
+                    this.showTranslatedSubtitle(`${text} [翻譯失敗]`);
                 }
-            });
+            } catch (translationError) {
+                this.hideTranslatingStatus();
+                console.error('Real-time translation failed:', translationError);
+                
+                // 根據錯誤類型顯示不同提示
+                let errorText = '[翻譯失敗]';
+                if (translationError.message.includes('EXTENSION_CONTEXT_INVALID')) {
+                    errorText = '[需要重新載入擴展]';
+                } else if (translationError.message.includes('API_ERROR')) {
+                    errorText = '[API 錯誤]';
+                } else if (translationError.message.includes('QUOTA_EXCEEDED')) {
+                    errorText = '[API 配額不足]';
+                }
+                
+                this.showTranslatedSubtitle(`${text} ${errorText}`);
+                
+                // 對於嚴重錯誤顯示通知
+                if (translationError.message.includes('EXTENSION_CONTEXT_INVALID')) {
+                    this.showErrorNotification('擴展需要重新載入，請刷新頁面');
+                }
+            }
 
         } catch (error) {
-            console.error('Translation request failed:', error);
+            console.error('Translation request setup failed:', error);
             this.hideTranslatingStatus();
-            this.showTranslatedSubtitle(text);
+            this.showTranslatedSubtitle(`${text} [設置錯誤]`);
         }
     }
 
@@ -1152,13 +1219,27 @@ class YouTubeSubtitleTranslator {
             'preload': '預載翻譯'
         };
         
+        this.showNotification(`已切換至 ${modeNames[mode]} 模式`, 'success');
+    }
+
+    // 顯示錯誤通知
+    showErrorNotification(message) {
+        this.showNotification(message, 'error');
+    }
+
+    // 通用通知方法
+    showNotification(message, type = 'info') {
         const notification = document.createElement('div');
+        const backgroundColor = type === 'error' ? 'rgba(220, 53, 69, 0.9)' : 
+                              type === 'success' ? 'rgba(40, 167, 69, 0.9)' : 
+                              'rgba(0, 0, 0, 0.9)';
+        
         notification.style.cssText = `
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
+            background: ${backgroundColor};
             color: white;
             padding: 20px 30px;
             border-radius: 8px;
@@ -1168,27 +1249,35 @@ class YouTubeSubtitleTranslator {
             font-weight: 500;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
-            animation: fadeInOut 2s ease-in-out forwards;
+            animation: fadeInOut ${type === 'error' ? '4s' : '2s'} ease-in-out forwards;
+            max-width: 400px;
+            text-align: center;
+            word-wrap: break-word;
         `;
         
-        notification.textContent = `已切換至 ${modeNames[mode]} 模式`;
+        notification.textContent = message;
         
-        // 添加動畫CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeInOut {
-                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-                20%, 80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
-            }
-        `;
-        document.head.appendChild(style);
+        // 添加動畫CSS（如果還沒有）
+        if (!document.querySelector('#notification-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'notification-animation-style';
+            style.textContent = `
+                @keyframes fadeInOut {
+                    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                    15%, 85% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.remove();
-            style.remove();
-        }, 2000);
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, type === 'error' ? 4000 : 2000);
     }
 
     // 移除切換按鈕
