@@ -6,6 +6,30 @@ const API_ENDPOINTS = {
   ollama: 'http://localhost:11434/api/chat'
 };
 
+// Debug logging utilities
+async function getDebugMode() {
+  const settings = await chrome.storage.sync.get(['debugMode']);
+  return settings.debugMode || false;
+}
+
+async function debugLog(...args) {
+  if (await getDebugMode()) {
+    console.log('[TransCraft Debug]', ...args);
+  }
+}
+
+async function debugWarn(...args) {
+  if (await getDebugMode()) {
+    console.warn('[TransCraft Debug]', ...args);
+  }
+}
+
+async function debugError(...args) {
+  if (await getDebugMode()) {
+    console.error('[TransCraft Debug]', ...args);
+  }
+}
+
 const DEFAULT_EXPERT_MODE_PROMPTS = {
   general: {
     name: '一般翻譯',
@@ -88,6 +112,36 @@ function addSeparatorPreservationToPrompt(prompt) {
   return separatorInstruction + prompt;
 }
 
+// Helper function to log API requests in debug mode
+async function logAPIRequest(apiName, endpoint, options) {
+  const debugMode = await getDebugMode();
+  if (!debugMode) return;
+  
+  console.log(`[TransCraft Debug] ${apiName} API Request:`, {
+    endpoint: endpoint,
+    method: options.method || 'GET',
+    headers: Object.keys(options.headers || {}),
+    bodyPreview: options.body ? JSON.parse(options.body) : undefined,
+    timestamp: new Date().toISOString()
+  });
+}
+
+// Helper function to log API responses in debug mode
+async function logAPIResponse(apiName, response, startTime, data = null) {
+  const debugMode = await getDebugMode();
+  if (!debugMode) return;
+  
+  const elapsedTime = Date.now() - startTime;
+  console.log(`[TransCraft Debug] ${apiName} API Response:`, {
+    status: response.status,
+    statusText: response.statusText,
+    elapsedTime: `${elapsedTime}ms`,
+    headers: Object.fromEntries(response.headers.entries()),
+    dataPreview: data ? JSON.stringify(data).substring(0, 200) + '...' : 'N/A',
+    timestamp: new Date().toISOString()
+  });
+}
+
 async function getExpertModePrompts() {
   const storage = await chrome.storage.sync.get(['customExpertModes']);
   const customModes = storage.customExpertModes || {};
@@ -120,28 +174,50 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
   const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
   const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
 
-  const response = await fetch(API_ENDPOINTS.openai, {
+  // Get debug mode setting
+  const debugMode = await chrome.storage.sync.get(['debugMode']).then(r => r.debugMode || false);
+  
+  const requestBody = {
+    model: model,
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'user',
+        content: text
+      }
+    ],
+    temperature: 0.3,
+    max_tokens: 2000
+  };
+
+  if (debugMode) {
+    console.log('[TransCraft Debug] OpenAI API Request:', {
+      endpoint: API_ENDPOINTS.openai,
+      model: model,
+      textLength: text.length,
+      textPreview: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+      expertMode: expertMode,
+      targetLanguage: targetLanguage
+    });
+  }
+
+  const startTime = Date.now();
+
+  const fetchOptions = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: model,
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt
-        },
-        {
-          role: 'user',
-          content: text
-        }
-      ],
-      temperature: 0.3,
-      max_tokens: 2000
-    })
-  });
+    body: JSON.stringify(requestBody)
+  };
+
+  await logAPIRequest('OpenAI', API_ENDPOINTS.openai, fetchOptions);
+
+  const response = await fetch(API_ENDPOINTS.openai, fetchOptions);
 
   if (!response.ok) {
     let errorMessage = 'OpenAI API error';
@@ -181,9 +257,24 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
 
   const data = await response.json();
   
+  await logAPIResponse('OpenAI', response, startTime, data);
+  
   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
     console.error('Invalid OpenAI response structure:', JSON.stringify(data, null, 2));
     throw new Error('OpenAI返回無效的響應結構');
+  }
+  
+  const elapsedTime = Date.now() - startTime;
+  
+  if (debugMode) {
+    console.log('[TransCraft Debug] OpenAI API Response:', {
+      elapsedTime: `${elapsedTime}ms`,
+      status: response.status,
+      usage: data.usage,
+      translationLength: data.choices[0].message.content?.length || 0,
+      translationPreview: data.choices[0].message.content?.substring(0, 100) + 
+        (data.choices[0].message.content?.length > 100 ? '...' : '')
+    });
   }
   
   return data.choices[0].message.content;
@@ -545,8 +636,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // 根據錯誤類型決定日誌級別
       const errorMsg = error.message;
       if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高') || 
-          errorMsg.includes('API Key 無效') || errorMsg.includes('餘額不足') || 
-          errorMsg.includes('服務暫時不可用')) {
+          errorMsg.includes('rate-limited') || errorMsg.includes('temporarily') ||
+          errorMsg.includes('暫時被限制') || errorMsg.includes('限制使用') ||
+          errorMsg.includes('API Key 無效') || errorMsg.includes('已過期') ||
+          errorMsg.includes('餘額不足') || errorMsg.includes('權限不足') ||
+          errorMsg.includes('服務暫時不可用') || errorMsg.includes('配額') ||
+          errorMsg.includes('quota') || errorMsg.includes('exceeded') ||
+          errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out')) {
         console.warn('Translation known issue:', errorMsg);
       } else {
         console.error('Translation unexpected error:', error);
@@ -607,11 +703,23 @@ async function handleTranslation(request) {
     const { selectedApi, apiKeys, selectedModel } = apiConfig;
     const apiKey = apiKeys[selectedApi];
     
-    if (!apiKey) {
+    if (!apiKey && selectedApi !== 'ollama') {
       throw new Error(`缺少 ${selectedApi} 的 API Key`);
     }
 
+    // Debug log translation request
+    await debugLog('Background Translation Request:', {
+      api: selectedApi,
+      model: selectedModel,
+      targetLanguage: targetLanguage,
+      expertMode: expertMode,
+      textLength: text.length,
+      textPreview: text.substring(0, 100) + (text.length > 100 ? '...' : '')
+    });
+
+    const startTime = Date.now();
     let translation;
+    
     switch (selectedApi) {
       case 'openai':
         translation = await translateWithOpenAI(text, targetLanguage, apiKey, selectedModel || 'gpt-4o-mini', expertMode);
@@ -632,9 +740,36 @@ async function handleTranslation(request) {
         throw new Error('未選擇有效的 API');
     }
 
+    const elapsedTime = Date.now() - startTime;
+    
+    // Debug log successful translation
+    await debugLog('Background Translation Success:', {
+      api: selectedApi,
+      elapsedTime: `${elapsedTime}ms`,
+      translationLength: translation?.length || 0,
+      translationPreview: translation?.substring(0, 100) + (translation?.length > 100 ? '...' : '')
+    });
+
     return { translation };
   } catch (error) {
-    console.error('Translation handling error:', error);
+    const errorMsg = error.message;
+    
+    // 已知錯誤使用 warn，未知錯誤使用 error
+    if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高') || 
+        errorMsg.includes('rate-limited') || errorMsg.includes('temporarily') ||
+        errorMsg.includes('暫時被限制') || errorMsg.includes('限制使用') ||
+        errorMsg.includes('API Key 無效') || errorMsg.includes('已過期') ||
+        errorMsg.includes('餘額不足') || errorMsg.includes('權限不足') ||
+        errorMsg.includes('服務暫時不可用') || errorMsg.includes('配額') ||
+        errorMsg.includes('quota') || errorMsg.includes('exceeded') ||
+        errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out')) {
+      console.warn('Translation known issue:', errorMsg);
+      await debugWarn('Translation known issue:', errorMsg);
+    } else {
+      console.error('Translation unexpected error:', error);
+      await debugError('Translation unexpected error:', error);
+    }
+    
     return { error: error.message };
   }
 }

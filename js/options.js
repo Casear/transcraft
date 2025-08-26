@@ -9,6 +9,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Batch settings elements
     const maxBatchLengthInput = document.getElementById('max-batch-length');
     const maxBatchElementsInput = document.getElementById('max-batch-elements');
+    const requestTimeoutInput = document.getElementById('request-timeout');
+    
+    // Debug mode elements
+    const settingsTitle = document.getElementById('settings-title');
+    const debugSection = document.getElementById('debug-section');
+    const debugModeCheckbox = document.getElementById('debug-mode-checkbox');
+    let titleClickCount = 0;
+    let titleClickTimer = null;
     
     // Expert modes management elements
     const expertModesList = document.getElementById('expert-modes-list');
@@ -147,6 +155,28 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     };
 
+    // Title click handler for debug mode
+    settingsTitle.addEventListener('click', () => {
+        titleClickCount++;
+        
+        // Reset timer on each click
+        if (titleClickTimer) {
+            clearTimeout(titleClickTimer);
+        }
+        
+        // Reset count after 2 seconds of no clicks
+        titleClickTimer = setTimeout(() => {
+            titleClickCount = 0;
+        }, 2000);
+        
+        // Show debug section after 10 clicks
+        if (titleClickCount >= 10) {
+            debugSection.style.display = 'block';
+            showStatus('除錯模式已解鎖！', 'success');
+            titleClickCount = 0;
+        }
+    });
+
     async function loadSettings() {
         const settings = await chrome.storage.sync.get([
             'selectedApi',
@@ -154,7 +184,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             'targetLanguage',
             'selectedModel',
             'maxBatchLength',
-            'maxBatchElements'
+            'maxBatchElements',
+            'requestTimeout',
+            'debugMode'
         ]);
 
         if (settings.selectedApi) {
@@ -185,6 +217,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Load batch settings
         maxBatchLengthInput.value = settings.maxBatchLength || 8000;
         maxBatchElementsInput.value = settings.maxBatchElements || 20;
+        requestTimeoutInput.value = settings.requestTimeout || 60;
+        
+        // Load debug mode setting
+        if (settings.debugMode !== undefined) {
+            debugModeCheckbox.checked = settings.debugMode;
+            // Show debug section if debug mode was previously enabled
+            if (settings.debugMode) {
+                debugSection.style.display = 'block';
+            }
+        }
     }
 
     function updateModelOptions(selectedApi) {
@@ -329,6 +371,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Validate batch settings
         const maxBatchLength = parseInt(maxBatchLengthInput.value);
         const maxBatchElements = parseInt(maxBatchElementsInput.value);
+        const requestTimeout = parseInt(requestTimeoutInput.value);
         
         if (isNaN(maxBatchLength) || maxBatchLength < 1000 || maxBatchLength > 32000) {
             showStatus('批次最大字元數必須在 1000-32000 範圍內', 'error');
@@ -339,6 +382,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             showStatus('批次最大元素數必須在 5-50 範圍內', 'error');
             return;
         }
+        
+        if (isNaN(requestTimeout) || requestTimeout < 15 || requestTimeout > 120) {
+            showStatus('請求超時時間必須在 15-120 秒範圍內', 'error');
+            return;
+        }
 
         await chrome.storage.sync.set({
             selectedApi: selectedApi,
@@ -346,7 +394,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             targetLanguage: targetLanguageSelect.value,
             selectedModel: modelSelect.value,
             maxBatchLength: maxBatchLength,
-            maxBatchElements: maxBatchElements
+            maxBatchElements: maxBatchElements,
+            requestTimeout: requestTimeout,
+            debugMode: debugModeCheckbox.checked
         });
 
         showStatus('設定已儲存', 'success');

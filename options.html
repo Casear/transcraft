@@ -7,7 +7,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>TransCraft 設定</h1>
+        <h1 id="settings-title" style="cursor: default; user-select: none;">TransCraft 設定</h1>
         
         <div class="section">
             <h2>選擇翻譯服務</h2>
@@ -163,6 +163,12 @@
                 <small class="help-text">單次翻譯請求的最大元素數量，建議範圍：10-30</small>
             </div>
 
+            <div class="form-group">
+                <label for="request-timeout">翻譯請求超時時間（秒）</label>
+                <input type="number" id="request-timeout" min="15" max="120" step="5" value="60">
+                <small class="help-text">單次翻譯請求的最長等待時間，建議範圍：30-60 秒</small>
+            </div>
+
             <div class="batch-info">
                 <div class="info-item">
                     <strong>較小批次：</strong>翻譯速度較慢，但更穩定，適合複雜內容
@@ -184,6 +190,19 @@
             <button id="add-expert-mode-button" class="secondary-button">
                 <span>+ 新增專家模式</span>
             </button>
+        </div>
+
+        <div class="section" id="debug-section" style="display: none;">
+            <h2>🐛 除錯模式</h2>
+            <p class="section-description">開發者選項 - 開啟後會在控制台顯示詳細的除錯資訊</p>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="debug-mode-checkbox">
+                    <span style="margin-left: 8px;">啟用除錯模式</span>
+                </label>
+                <small class="help-text">開啟後會記錄 API 請求/回應、翻譯過程等詳細資訊到瀏覽器控制台</small>
+            </div>
         </div>
 
         <div class="button-group">

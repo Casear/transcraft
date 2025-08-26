@@ -5,6 +5,46 @@ let expertMode = 'general';
 let floatingButton = null;
 let isTranslating = false;
 let isLanguageMenuOpen = false;
+let debugMode = false;
+
+// Debug logging utility
+function debugLog(...args) {
+  if (debugMode) {
+    console.log('[TransCraft Debug]', ...args);
+  }
+}
+
+function debugWarn(...args) {
+  if (debugMode) {
+    console.warn('[TransCraft Debug]', ...args);
+  }
+}
+
+function debugError(...args) {
+  if (debugMode) {
+    console.error('[TransCraft Debug]', ...args);
+  }
+}
+
+// Initialize debug mode from storage
+chrome.storage.sync.get(['debugMode'], (result) => {
+  debugMode = result.debugMode || false;
+  if (debugMode) {
+    console.log('[TransCraft Debug] Debug mode is ENABLED');
+  }
+});
+
+// Listen for debug mode changes
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.debugMode) {
+    debugMode = changes.debugMode.newValue;
+    if (debugMode) {
+      console.log('[TransCraft Debug] Debug mode has been ENABLED');
+    } else {
+      console.log('[TransCraft Debug] Debug mode has been DISABLED');
+    }
+  }
+});
 
 function getTranslatableElements() {
   // 取得所有包含文字的區塊級元素
@@ -193,27 +233,44 @@ function getTranslatableElements() {
     return position & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
   });
   
-  console.log(`Found ${uniqueElements.length} translatable elements (filtered from ${elements.length})`);
+  debugLog(`Found ${uniqueElements.length} translatable elements (filtered from ${elements.length})`);
   return uniqueElements;
 }
 
-async function translateText(text, apiConfig) {
+async function translateText(text, apiConfig, timeoutMs = 60000) {
   try {
     // 確保擴充功能上下文仍然有效
     if (!chrome.runtime?.id) {
       throw new Error('EXTENSION_CONTEXT_INVALID');
     }
     
+    // Debug log request
+    debugLog('Translation Request:', {
+      textLength: text.length,
+      textPreview: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+      targetLanguage: targetLanguage,
+      apiConfig: {
+        selectedApi: apiConfig.selectedApi,
+        selectedModel: apiConfig.selectedModel
+      },
+      expertMode: expertMode,
+      timeout: timeoutMs
+    });
+    
+    const startTime = Date.now();
+    
     const response = await new Promise((resolve, reject) => {
       let isResolved = false;
       
-      // 設定超時機制 (30秒)
+      // 設定超時機制（使用傳入的 timeout 值）
       const timeoutId = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
-          reject(new Error('TIMEOUT_ERROR: Translation request timed out'));
+          const timeoutError = new Error(`TIMEOUT_ERROR: Translation request timed out after ${timeoutMs/1000} seconds`);
+          debugError('Translation timeout:', timeoutError);
+          reject(timeoutError);
         }
-      }, 30000);
+      }, timeoutMs);
       
       try {
         chrome.runtime.sendMessage({
@@ -231,14 +288,16 @@ async function translateText(text, apiConfig) {
           // 檢查Chrome runtime錯誤
           if (chrome.runtime.lastError) {
             const errorMessage = chrome.runtime.lastError.message || JSON.stringify(chrome.runtime.lastError) || 'EXTENSION_CONTEXT_INVALID';
-            console.error('Chrome runtime error:', errorMessage);
+            debugError('Chrome runtime error:', errorMessage);
             reject(new Error(errorMessage));
             return;
           }
           
           // 檢查響應是否有效
           if (!response) {
-            reject(new Error('NETWORK_ERROR: No response received'));
+            const networkError = new Error('NETWORK_ERROR: No response received');
+            debugError('Network error:', networkError);
+            reject(networkError);
             return;
           }
           
@@ -248,28 +307,31 @@ async function translateText(text, apiConfig) {
         clearTimeout(timeoutId);
         if (!isResolved) {
           isResolved = true;
-          console.error('Error sending message:', error);
+          debugError('Error sending message:', error);
           reject(error);
         }
       }
     });
     
+    const elapsedTime = Date.now() - startTime;
+    
     if (response.error) {
-      // 檢查不同類型的錯誤
-      const errorMsg = response.error;
-      if (errorMsg.includes('quota') || errorMsg.includes('billing') || errorMsg.includes('exceeded')) {
-        throw new Error('QUOTA_EXCEEDED');
-      } else if (errorMsg.includes('network') || errorMsg.includes('timeout') || errorMsg.includes('connection')) {
-        throw new Error('NETWORK_ERROR');
-      } else if (errorMsg.includes('API key') || errorMsg.includes('authentication') || errorMsg.includes('unauthorized')) {
-        throw new Error('API_KEY_ERROR');
-      } else {
-        throw new Error('API_ERROR');
-      }
+      debugError('Translation API Error:', response.error);
+      // 直接拋出原始錯誤訊息，保留詳細信息
+      throw new Error(response.error);
     }
+    
+    // Debug log response
+    debugLog('Translation Response:', {
+      elapsedTime: `${elapsedTime}ms`,
+      translationLength: response.translation?.length || 0,
+      translationPreview: response.translation?.substring(0, 100) + 
+        (response.translation?.length > 100 ? '...' : '')
+    });
     
     return response.translation || null;
   } catch (error) {
+    debugError('Translation failed:', error.message);
     // 重新拋出錯誤，讓上層處理
     throw error;
   }
@@ -296,9 +358,10 @@ async function translatePage() {
   updateFloatingButton('translating');
 
   // 獲取批次設定
-  const batchSettings = await chrome.storage.sync.get(['maxBatchLength', 'maxBatchElements']);
+  const batchSettings = await chrome.storage.sync.get(['maxBatchLength', 'maxBatchElements', 'requestTimeout']);
   const maxBatchLength = batchSettings.maxBatchLength || 8000; // 預設最大8000字元
   const maxBatchElements = batchSettings.maxBatchElements || 20; // 預設最大20個元素
+  const requestTimeout = (batchSettings.requestTimeout || 60) * 1000; // 轉換為毫秒，預設60秒
   
   let successCount = 0;
   let processedElements = 0;
@@ -310,11 +373,14 @@ async function translatePage() {
     const texts = [];
     const validElements = [];
     let currentBatchLength = 0;
+    let batchProcessedCount = 0; // 追蹤本批次處理的元素數量
     
     // 動態決定批次大小
     for (let i = processedElements; i < elements.length && batch.length < maxBatchElements; i++) {
       const element = elements[i];
       const text = element.innerText.trim();
+      
+      batchProcessedCount++; // 記錄檢查過的元素數量
       
       if (text) {
         // 計算加入這個元素後的總長度（包括分隔符）
@@ -323,6 +389,7 @@ async function translatePage() {
         
         // 如果加入這個元素會超過長度限制，且已經有其他元素，則結束此批次
         if (newLength > maxBatchLength && texts.length > 0) {
+          batchProcessedCount--; // 這個元素沒有被加入批次，不算處理
           break;
         }
         
@@ -332,8 +399,6 @@ async function translatePage() {
         batch.push(element);
         currentBatchLength = newLength;
       }
-      
-      processedElements++;
       
       // 如果單個元素就達到長度限制，立即處理
       if (currentBatchLength >= maxBatchLength) {
@@ -346,12 +411,12 @@ async function translatePage() {
       const combinedText = texts.join('\n\n<<TRANSLATE_SEPARATOR>>\n\n');
       
       try {
-        const translatedText = await translateText(combinedText, apiConfig);
+        const translatedText = await translateText(combinedText, apiConfig, requestTimeout);
         
         if (translatedText) {
           // 調試：記錄原始翻譯文本
-          console.log('原始翻譯文本:', translatedText);
-          console.log('查找分隔符:', translatedText.includes('<<TRANSLATE_SEPARATOR>>'));
+          debugLog('原始翻譯文本:', translatedText);
+          debugLog('查找分隔符:', translatedText.includes('<<TRANSLATE_SEPARATOR>>'))
           
           // 使用多種分隔符模式進行匹配
           let translations;
@@ -373,8 +438,8 @@ async function translatePage() {
           translations = translations.filter(t => t && t.trim());
           
           // 調試：記錄處理後的翻譯數量
-          console.log(`批次處理: 原始元素 ${validElements.length} 個, 翻譯結果 ${translations.length} 個`);
-          console.log('翻譯段落:', translations);
+          debugLog(`批次處理: 原始元素 ${validElements.length} 個, 翻譯結果 ${translations.length} 個`);
+          debugLog('翻譯段落:', translations)
           
           // 為每個元素添加翻譯
           const maxIndex = Math.min(validElements.length, translations.length);
@@ -409,10 +474,20 @@ async function translatePage() {
           }
         }
       } catch (error) {
-        // 記錄錯誤但繼續處理剩餘批次
-        console.error('Batch translation error:', error);
-        
+        // 根據錯誤類型決定日誌級別
         const errorMsg = error.message;
+        if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高') || 
+            errorMsg.includes('rate-limited') || errorMsg.includes('temporarily') ||
+            errorMsg.includes('暫時被限制') || errorMsg.includes('限制使用') ||
+            errorMsg.includes('API Key 無效') || errorMsg.includes('已過期') ||
+            errorMsg.includes('餘額不足') || errorMsg.includes('權限不足') ||
+            errorMsg.includes('服務暫時不可用') || errorMsg.includes('配額') ||
+            errorMsg.includes('quota') || errorMsg.includes('exceeded') ||
+            errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out')) {
+          console.warn('Batch translation known issue:', errorMsg);
+        } else {
+          console.error('Batch translation unexpected error:', error);
+        }
         
         // 只在嚴重錯誤時停止處理
         if (errorMsg === 'EXTENSION_CONTEXT_INVALID' || 
@@ -435,27 +510,54 @@ async function translatePage() {
           return;
         }
         
-        // 收集錯誤信息，不立即顯示
+        // 立即顯示第一個錯誤並停止翻譯
         console.warn('Translation error for this batch:', errorMsg);
         
-        // 將錯誤添加到錯誤集合中
+        let errorTitle, errorDetail, errorSolution;
+        
         if (errorMsg === 'QUOTA_EXCEEDED') {
-          errors.push({ type: 'quota', message: '配額已用完', detail: '部分內容可能未翻譯。請檢查您的 API 帳單設定。' });
+          errorTitle = 'API 使用配額已達上限';
+          errorDetail = '您的 API 使用額度已用完，無法繼續翻譯。<br>請到 API 提供商網站檢查使用情況或升級方案。';
+          errorSolution = '前往 API 設定頁面檢查配額狀況';
         } else if (errorMsg === 'NETWORK_ERROR') {
-          errors.push({ type: 'network', message: '網路暫時不穩', detail: '繼續翻譯剩餘內容...' });
+          errorTitle = '網路連線問題';
+          errorDetail = '無法連接到翻譯服務，請檢查您的網路連線是否正常。';
+          errorSolution = '請檢查網路連線後重試';
         } else if (errorMsg.includes('暫時被上游限制') || errorMsg.includes('請求頻率過高') || 
                    errorMsg.includes('rate-limited') || errorMsg.includes('temporarily') ||
                    errorMsg.includes('暫時被限制') || errorMsg.includes('限制使用')) {
-          errors.push({ type: 'rate_limit', message: '翻譯暫時受限', detail: errorMsg });
+          // 提取模型名稱
+          const modelMatch = errorMsg.match(/(\S+\/[^暫\s]+)/);
+          const modelName = modelMatch ? modelMatch[1] : '當前模型';
+          
+          errorTitle = `${modelName} 使用頻率受限`;
+          errorDetail = '該免費模型暫時被上游服務商限制，無法處理更多請求。';
+          errorSolution = '請等待 1-5 分鐘後重試，或切換到其他模型';
         } else if (errorMsg.includes('API Key 無效') || errorMsg.includes('已過期')) {
-          errors.push({ type: 'api_key', message: 'API Key 問題', detail: errorMsg });
+          errorTitle = 'API 金鑰認證失敗';
+          errorDetail = '您的 API 金鑰無效或已過期，無法通過身份驗證。';
+          errorSolution = '請到擴展設定中檢查並更新 API 金鑰';
         } else if (errorMsg.includes('餘額不足') || errorMsg.includes('權限不足')) {
-          errors.push({ type: 'account', message: '帳戶問題', detail: errorMsg });
+          errorTitle = '帳戶餘額或權限不足';
+          errorDetail = '您的 API 帳戶餘額不足或沒有使用該服務的權限。';
+          errorSolution = '請前往 API 提供商網站充值或檢查權限設定';
         } else if (errorMsg.includes('服務暫時不可用')) {
-          errors.push({ type: 'service', message: '服務暫時中斷', detail: errorMsg });
+          errorTitle = 'AI 翻譯服務暫時中斷';
+          errorDetail = 'API 服務商的伺服器暫時無法提供服務，這通常是臨時性問題。';
+          errorSolution = '請等待幾分鐘後重試，或切換到其他 AI 服務';
+        } else if (errorMsg.includes('TIMEOUT_ERROR') || errorMsg.includes('timed out')) {
+          // 從錯誤訊息中提取 timeout 時間，如果無法提取則使用預設值
+          const timeoutMatch = errorMsg.match(/after (\d+) seconds/);
+          const timeoutSeconds = timeoutMatch ? timeoutMatch[1] : Math.floor(requestTimeout / 1000);
+          
+          errorTitle = '翻譯請求超時';
+          errorDetail = `翻譯請求在 ${timeoutSeconds} 秒內沒有收到回應，可能是網路連線不穩定或 API 服務回應緩慢。`;
+          errorSolution = '請檢查網路連線狀況，稍後重試或切換到其他 AI 服務';
         } else if (errorMsg.includes('API error') || errorMsg.includes('API_ERROR')) {
           const shortMsg = errorMsg.split('\n')[0]; // 只取第一行（友好消息）
-          errors.push({ type: 'api_error', message: '翻譯錯誤', detail: shortMsg });
+          errorTitle = 'API 通訊發生錯誤';
+          errorDetail = shortMsg;
+          errorSolution = '請稍後重試，若問題持續請切換其他 AI 服務';
         } else {
           // 對於未知錯誤，嘗試提取可理解的部分
           let displayMessage = '翻譯過程出現問題';
@@ -485,15 +587,30 @@ async function translatePage() {
             extractedInfo = 'API 使用額度可能已達上限';
           }
           
-          const finalMessage = extractedInfo || displayMessage;
-          const detailMessage = extractedInfo ? `${finalMessage}\n技術細節：${errorMsg}` : errorMsg;
-          
-          errors.push({ type: 'unknown', message: finalMessage, detail: detailMessage });
+          errorTitle = displayMessage;
+          errorDetail = extractedInfo || errorMsg.substring(0, 100);
+          errorSolution = '請重新嘗試，若問題持續請聯繫技術支援';
         }
         
-        // 繼續處理下一個批次
+        // 立即顯示錯誤並停止翻譯
+        isTranslating = false;
+        updateFloatingButton('ready');
+        
+        const errorMessage = `<strong>${errorTitle}</strong><br><br>${errorDetail}<br><br><em>建議解決方案：</em><br>${errorSolution}`;
+        showErrorModal('翻譯中斷', errorMessage, 10000);
+        return;
       }
+    } else if (batchProcessedCount > 0) {
+      // 如果沒有有效文本但檢查了一些元素，仍然需要推進進度以避免無限循環
+      debugLog(`跳過 ${batchProcessedCount} 個空白或無效元素`)
+    } else {
+      // 如果沒有處理任何元素，可能是邏輯錯誤，強制跳出避免無限循環
+      console.warn('批次處理中沒有檢查任何元素，強制退出避免無限循環');
+      break;
     }
+    
+    // 更新 processedElements，確保正確追蹤已處理的元素數量
+    processedElements += batchProcessedCount;
     
     // 更新進度
     const progress = Math.min(100, (processedElements / elements.length) * 100);
@@ -510,7 +627,7 @@ async function translatePage() {
   }, 500);
   
   // 顯示翻譯統計
-  console.log(`翻譯完成: 成功翻譯 ${successCount} / ${elements.length} 個元素`);
+  debugLog(`翻譯完成: 成功翻譯 ${successCount} / ${elements.length} 個元素`)
   
   // 統一顯示錯誤摘要
   if (errors.length > 0) {
@@ -525,11 +642,16 @@ async function translatePage() {
 }
 
 function addTranslationToElement(element, translationText) {
-  // 更嚴格的重複檢查
-  if (element.querySelector('.ai-translation-block') || 
-      element.closest('.ai-translation-block') ||
-      element.classList.contains('ai-translation-block')) {
-    console.warn('Element already has translation, skipping:', element);
+  // 精確的重複檢查，避免誤判
+  if (element.classList.contains('ai-translation-block')) {
+    console.warn('Element is a translation block itself, skipping:', element);
+    return;
+  }
+  
+  // 檢查元素內部是否已經直接包含翻譯區塊
+  const existingTranslations = element.querySelectorAll(':scope > .ai-translation-block');
+  if (existingTranslations.length > 0) {
+    console.warn('Element already has direct translation children, skipping:', element);
     return;
   }
   
