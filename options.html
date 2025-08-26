@@ -153,14 +153,19 @@
             
             <div class="form-group">
                 <label for="max-batch-length">批次最大字元數</label>
-                <input type="number" id="max-batch-length" min="1000" max="32000" step="1000" value="8000">
-                <small class="help-text">單次翻譯請求的最大字元數，建議範圍：2000-16000</small>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" id="max-batch-length" min="1000" max="60000" step="1000" value="8000" style="flex: 1;">
+                    <button type="button" id="auto-adjust-batch-size" class="secondary-button" title="根據所選模型自動調整批次大小">
+                        🎯 自動調整
+                    </button>
+                </div>
+                <small class="help-text">單次翻譯請求的最大字元數，範圍：1000-60000。點擊「自動調整」根據所選模型優化批次大小</small>
             </div>
 
             <div class="form-group">
                 <label for="max-batch-elements">批次最大元素數</label>
-                <input type="number" id="max-batch-elements" min="5" max="50" step="5" value="20">
-                <small class="help-text">單次翻譯請求的最大元素數量，建議範圍：10-30</small>
+                <input type="number" id="max-batch-elements" min="1" step="1" value="20">
+                <small class="help-text">單次翻譯請求的最大元素數量，無上限限制，由字元數自動控制</small>
             </div>
 
             <div class="form-group">
