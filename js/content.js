@@ -54,51 +54,99 @@ function detectLanguageByCharacteristics(text) {
   const totalChars = cleanText.length;
   
   // If significant portion is Chinese characters
-  if (chineseCount / totalChars > 0.3) {
-    // Try to distinguish between zh-CN and zh-TW
-    const traditionalIndicators = /[繁體複雜學習開關]/g;
-    const simplifiedIndicators = /[简体复杂学习开关]/g;
+  if (chineseCount / totalChars > 0.2) { // Lower threshold for mixed content
+    // Enhanced Traditional/Simplified Chinese detection
+    const traditionalIndicators = /[繁體複雜學習開關們這樣時間問題說話語言國家經濟發展變化]/g;
+    const simplifiedIndicators = /[简体复杂学习开关们这样时间问题说话语言国家经济发展变化]/g;
+    
+    // Check for traditional-only and simplified-only characters
+    const traditionalOnlyChars = /[繁體複雜學習開關]/g;
+    const simplifiedOnlyChars = /[简体复杂学习开关]/g;
     
     const traditionalCount = (text.match(traditionalIndicators) || []).length;
     const simplifiedCount = (text.match(simplifiedIndicators) || []).length;
+    const traditionalOnlyCount = (text.match(traditionalOnlyChars) || []).length;
+    const simplifiedOnlyCount = (text.match(simplifiedOnlyChars) || []).length;
     
-    if (simplifiedCount > traditionalCount) {
+    // Strong indicators for simplified
+    if (simplifiedOnlyCount > 0 || (simplifiedCount > traditionalCount * 1.5)) {
       return 'zh-CN';
-    } else {
-      return 'zh-TW'; // Default to Traditional Chinese
+    }
+    // Strong indicators for traditional
+    else if (traditionalOnlyCount > 0 || (traditionalCount > simplifiedCount * 1.5)) {
+      return 'zh-TW';
+    }
+    
+    // Check HTML lang attribute or URL patterns as additional context
+    const htmlLang = document.documentElement.lang?.toLowerCase() || '';
+    const hostname = window.location.hostname.toLowerCase();
+    const isTraditionalContext = htmlLang.includes('tw') || htmlLang.includes('hk') || 
+                                hostname.includes('.tw') || hostname.includes('.hk');
+    const isSimplifiedContext = htmlLang.includes('cn') || hostname.includes('.cn');
+    
+    if (isSimplifiedContext) return 'zh-CN';
+    if (isTraditionalContext) return 'zh-TW';
+    
+    // Default based on common patterns
+    return traditionalCount >= simplifiedCount ? 'zh-TW' : 'zh-CN';
+  }
+  
+  // Japanese detection - prioritize kana presence over percentage
+  if (japaneseCount > 0) {
+    // If there are Japanese kana characters, it's likely Japanese
+    // even with a lower percentage due to kanji overlap with Chinese
+    if (japaneseCount / totalChars > 0.05 || japaneseCount > 10) {
+      return 'ja';
     }
   }
   
-  // Japanese has unique hiragana/katakana
-  if (japaneseCount / totalChars > 0.1) {
-    return 'ja';
-  }
+  // Lower thresholds for other character-based languages
+  if (koreanCount / totalChars > 0.2) return 'ko';
+  if (arabicCount / totalChars > 0.2) return 'ar';
+  if (thaiCount / totalChars > 0.2) return 'th';
+  if (russianCount / totalChars > 0.2) return 'ru';
   
-  if (koreanCount / totalChars > 0.3) return 'ko';
-  if (arabicCount / totalChars > 0.3) return 'ar';
-  if (thaiCount / totalChars > 0.3) return 'th';
-  if (russianCount / totalChars > 0.3) return 'ru';
-  
-  // For European languages, use simple word patterns
+  // Enhanced European language detection with scoring
   const lowerText = cleanText.toLowerCase();
   
-  // Spanish indicators
-  if (/\b(el|la|los|las|un|una|es|son|está|están|que|con|por|para|desde|hasta)\b/.test(lowerText)) {
-    return 'es';
+  const languagePatterns = {
+    'es': [
+      /\b(el|la|los|las|un|una|es|son|está|están|que|con|por|para|desde|hasta|más|muy|también|como|cuando|donde)\b/g,
+      /\b(español|idioma|hablar|decir|tiempo|día|año|casa|vida|agua|tierra|fuego)\b/g
+    ],
+    'fr': [
+      /\b(le|la|les|un|une|du|de|des|je|tu|il|elle|nous|vous|ils|elles|est|sont|avec|pour|dans|sur)\b/g,
+      /\b(français|langue|parler|dire|temps|jour|année|maison|vie|eau|terre|feu|tout|très|bien)\b/g
+    ],
+    'de': [
+      /\b(der|die|das|ein|eine|und|oder|ist|sind|mit|für|in|zu|von|auf|bei|nach|über|unter)\b/g,
+      /\b(deutsch|sprache|sprechen|sagen|zeit|tag|jahr|haus|leben|wasser|erde|feuer|alle|sehr|gut)\b/g
+    ],
+    'en': [
+      /\b(the|and|or|is|are|with|for|in|to|from|on|at|by|this|that|these|those|have|has|will|would)\b/g,
+      /\b(english|language|speak|say|time|day|year|house|life|water|earth|fire|all|very|good|can|could)\b/g
+    ]
+  };
+  
+  let maxScore = 0;
+  let detectedLang = null;
+  
+  // Calculate scores for each language
+  for (const [lang, patterns] of Object.entries(languagePatterns)) {
+    let score = 0;
+    for (const pattern of patterns) {
+      const matches = lowerText.match(pattern) || [];
+      score += matches.length;
+    }
+    
+    if (score > maxScore && score >= 3) { // Minimum 3 matches required
+      maxScore = score;
+      detectedLang = lang;
+    }
   }
   
-  // French indicators  
-  if (/\b(le|la|les|un|une|du|de|des|je|tu|il|elle|nous|vous|ils|elles|est|sont|avec|pour|dans)\b/.test(lowerText)) {
-    return 'fr';
-  }
-  
-  // German indicators
-  if (/\b(der|die|das|ein|eine|ich|du|er|sie|es|wir|ihr|sie|ist|sind|und|oder|aber|mit|für|in|auf|zu)\b/.test(lowerText)) {
-    return 'de';
-  }
-  
-  // Default to English for Latin script
-  return 'en';
+  // Return detected language or null if no strong match
+  return detectedLang;
 }
 
 async function detectLanguageWithBrowser(text) {
@@ -134,20 +182,31 @@ async function detectLanguage(text) {
 }
 
 function shouldTranslate(sourceLanguage, targetLanguage) {
-  if (!sourceLanguage || !targetLanguage) return true; // Proceed if uncertain
+  if (!sourceLanguage || !targetLanguage) {
+    debugLog('Language detection uncertain, proceeding with translation');
+    return true; // Proceed if uncertain
+  }
   
-  // Normalize language codes
+  // Normalize language codes with enhanced Chinese handling
   const normalizeLanguage = (lang) => {
     if (lang.startsWith('zh')) {
-      return lang; // Keep Chinese variants separate
+      return lang; // Keep Chinese variants separate (zh-TW ≠ zh-CN)
     }
-    return lang.split('-')[0]; // Remove region codes for other languages
+    return lang.split('-')[0]; // Remove region codes for other languages (en-US → en)
   };
   
   const normalizedSource = normalizeLanguage(sourceLanguage);
   const normalizedTarget = normalizeLanguage(targetLanguage);
   
-  return normalizedSource !== normalizedTarget;
+  const shouldTranslateResult = normalizedSource !== normalizedTarget;
+  
+  debugLog(`Translation decision: ${sourceLanguage} → ${targetLanguage}`, {
+    normalizedSource,
+    normalizedTarget,
+    shouldTranslate: shouldTranslateResult
+  });
+  
+  return shouldTranslateResult;
 }
 
 // Debug logging utility
@@ -653,10 +712,23 @@ async function translatePage() {
   if (apiConfig.enableLanguageDetection !== false) { // Enabled by default
     debugLog('Language detection enabled, checking content...');
     
-    // Sample some text from the page for language detection
-    const sampleTexts = elements.slice(0, 5).map(el => el.textContent).filter(text => text.trim().length > 20);
+    // Enhanced sampling strategy for better language detection
+    const sampleTexts = [];
+    const maxSamples = 10;
+    const minTextLength = 20;
+    
+    // Take diverse samples from different parts of the page
+    for (let i = 0; i < Math.min(elements.length, maxSamples); i++) {
+      const index = Math.floor((elements.length / maxSamples) * i);
+      const text = elements[index]?.textContent?.trim();
+      if (text && text.length > minTextLength) {
+        sampleTexts.push(text);
+      }
+    }
+    
     if (sampleTexts.length > 0) {
-      const sampleText = sampleTexts.join(' ').substring(0, 1000);
+      // Take more text for better detection, but limit total size
+      const sampleText = sampleTexts.join(' ').substring(0, 2000);
       const detectedLanguage = await detectLanguage(sampleText);
       
       debugLog('Detected language:', detectedLanguage, 'Target language:', targetLanguage);
@@ -1746,9 +1818,21 @@ async function checkAndAutoTranslate() {
     
     // 如果啟用語言檢測，先檢查是否需要翻譯
     if (apiConfig.enableLanguageDetection !== false) {
-      const sampleTexts = elements.slice(0, 5).map(el => el.textContent).filter(text => text.trim().length > 20);
+      const sampleTexts = [];
+      const maxSamples = 10;
+      const minTextLength = 20;
+      
+      // Take diverse samples from different parts of the page
+      for (let i = 0; i < Math.min(elements.length, maxSamples); i++) {
+        const index = Math.floor((elements.length / maxSamples) * i);
+        const text = elements[index]?.textContent?.trim();
+        if (text && text.length > minTextLength) {
+          sampleTexts.push(text);
+        }
+      }
+      
       if (sampleTexts.length > 0) {
-        const sampleText = sampleTexts.join(' ').substring(0, 1000);
+        const sampleText = sampleTexts.join(' ').substring(0, 2000);
         const detectedLanguage = await detectLanguage(sampleText);
         
         if (detectedLanguage && !shouldTranslate(detectedLanguage, targetLanguage)) {
