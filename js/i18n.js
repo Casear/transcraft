@@ -96,6 +96,11 @@ const messages = {
     'debug_mode_desc': 'Developer option - When enabled, detailed debug information will be displayed in the console',
     'enable_debug_mode': 'Enable Debug Mode',
     'debug_mode_help': 'When enabled, API requests/responses, translation process and other detailed information will be logged to browser console',
+    'common_instructions_label': 'Common Translation Instructions',
+    'common_instructions_help': 'These instructions will be automatically appended to all expert mode prompts. Changes take effect immediately.',
+    'common_instructions_placeholder': 'Enter common translation instructions that will be appended to all expert modes...',
+    'reset_to_default': 'Reset to Default',
+    'apply_changes': 'Apply Changes',
 
     // Language settings
     'language_settings': 'Language Settings',
@@ -243,6 +248,11 @@ const messages = {
     'debug_mode_desc': '開發者選項 - 開啟後會在控制台顯示詳細的除錯資訊',
     'enable_debug_mode': '啟用除錯模式',
     'debug_mode_help': '開啟後會記錄 API 請求/回應、翻譯過程等詳細資訊到瀏覽器控制台',
+    'common_instructions_label': '共用翻譯指示',
+    'common_instructions_help': '這些指示會自動附加到所有專家模式的提示中。更改會立即生效。',
+    'common_instructions_placeholder': '輸入會附加到所有專家模式的共用翻譯指示...',
+    'reset_to_default': '重置為預設值',
+    'apply_changes': '套用變更',
 
     // Language settings
     'language_settings': '語言設定',
@@ -390,6 +400,11 @@ const messages = {
     'debug_mode_desc': '開発者オプション - 有効にすると、詳細なデバッグ情報がコンソールに表示されます',
     'enable_debug_mode': 'デバッグモードを有効にする',
     'debug_mode_help': '有効にすると、APIリクエスト/レスポンス、翻訳プロセスなどの詳細情報がブラウザコンソールに記録されます',
+    'common_instructions_label': '共通翻訳指示',
+    'common_instructions_help': 'これらの指示は、すべてのエキスパートモードのプロンプトに自動的に追加されます。変更は即座に有効になります。',
+    'common_instructions_placeholder': 'すべてのエキスパートモードに追加される共通翻訳指示を入力...',
+    'reset_to_default': 'デフォルトにリセット',
+    'apply_changes': '変更を適用',
 
     // Language settings
     'language_settings': '言語設定',

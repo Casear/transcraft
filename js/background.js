@@ -118,71 +118,94 @@ async function debugError(...args) {
   }
 }
 
+// Common translation instructions shared by all modes
+const COMMON_TRANSLATION_INSTRUCTIONS = `
+IMPORTANT: If you see <<TRANSLATE_SEPARATOR>> in the text, you MUST preserve it exactly as is in your translation. This is a delimiter between different text segments.
+
+CRITICAL RULES:
+- Translate ALL content regardless of punctuation, symbols, quotes, brackets, ellipses, or any other marks
+- Do not skip any text segments, even if they contain unusual characters, symbols, or formatting
+- Every piece of text must be translated
+- Preserve the original formatting and tone
+- Provide ONLY the direct translation
+- Never add commentary, explanations, status updates, or meta-text about the translation process itself
+- Your response should contain nothing but the translated content
+`;
+
+// Function to build complete system prompt
+async function buildSystemPrompt(roleDescription, targetLanguage) {
+  // Check if there are custom common instructions
+  const storage = await chrome.storage.sync.get(['customCommonInstructions']);
+  const commonInstructions = storage.customCommonInstructions || COMMON_TRANSLATION_INSTRUCTIONS;
+  
+  return `${roleDescription.replace('{targetLanguage}', targetLanguage)}${commonInstructions}`;
+}
+
 const DEFAULT_EXPERT_MODE_PROMPTS = {
   general: {
     name: '一般翻譯',
     description: '標準翻譯模式',
-    systemPrompt: 'You are a professional translator. Translate the following text to {targetLanguage}. IMPORTANT: If you see <<TRANSLATE_SEPARATOR>> in the text, you MUST preserve it exactly as is in your translation. This is a delimiter between different text segments. Preserve the original formatting and tone. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a professional translator. Translate the following text to {targetLanguage}.',
     isDefault: true
   },
   novel_general: {
     name: '小說模式（通用）',
     description: '適合一般小說翻譯，保持文學性和情感表達',
-    systemPrompt: 'You are a literary translator specializing in novels and creative works. Translate the following text to {targetLanguage}. Maintain the literary style, emotional nuances, character voices, and narrative flow. Preserve cultural references when appropriate and adapt them naturally. Focus on readability and emotional impact rather than literal accuracy. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a literary translator specializing in novels and creative works. Translate the following text to {targetLanguage}. Maintain the literary style, emotional nuances, character voices, and narrative flow. Preserve cultural references when appropriate and adapt them naturally. Focus on readability and emotional impact rather than literal accuracy.',
     isDefault: true
   },
   novel_romance: {
     name: '愛情小說模式',
     description: '專為愛情小說設計，強調情感細膩和浪漫氛圍',
-    systemPrompt: 'You are a specialized translator for romance novels. Translate the following text to {targetLanguage}. Focus on conveying intimate emotions, romantic tension, and passionate expressions. Maintain the sensual and emotional tone while preserving character chemistry and romantic dialogue. Use elegant and evocative language that captures the heart-fluttering moments and emotional depth. Adapt cultural expressions of love and affection appropriately. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a specialized translator for romance novels. Translate the following text to {targetLanguage}. Focus on conveying intimate emotions, romantic tension, and passionate expressions. Maintain the sensual and emotional tone while preserving character chemistry and romantic dialogue. Use elegant and evocative language that captures the heart-fluttering moments and emotional depth. Adapt cultural expressions of love and affection appropriately.',
     isDefault: true
   },
   novel_fantasy: {
     name: '奇幻小說模式',
     description: '適合奇幻冒險小說，保持魔法世界觀和史詩感',
-    systemPrompt: 'You are a fantasy literature translator specializing in magical worlds and epic adventures. Translate the following text to {targetLanguage}. Maintain the grandeur and mystique of fantasy settings, preserve magical terminology and world-building elements. Keep character names, place names, and unique fantasy concepts consistent. Convey the sense of wonder, adventure, and epic scale while maintaining readability. Adapt magical concepts and mythological references appropriately for the target culture. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a fantasy literature translator specializing in magical worlds and epic adventures. Translate the following text to {targetLanguage}. Maintain the grandeur and mystique of fantasy settings, preserve magical terminology and world-building elements. Keep character names, place names, and unique fantasy concepts consistent. Convey the sense of wonder, adventure, and epic scale while maintaining readability. Adapt magical concepts and mythological references appropriately for the target culture.',
     isDefault: true
   },
   novel_mystery: {
     name: '懸疑推理模式',
     description: '專為懸疑推理小說設計，保持緊張感和邏輯性',
-    systemPrompt: 'You are a mystery and thriller translator specializing in suspenseful narratives. Translate the following text to {targetLanguage}. Maintain the tension, pacing, and atmospheric elements crucial to mystery stories. Preserve clues, red herrings, and logical deductions accurately. Keep investigative terminology and procedural details precise. Convey psychological tension, fear, and anticipation while maintaining clarity for readers to follow the plot. Adapt cultural references to crime, law enforcement, and social contexts appropriately. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a mystery and thriller translator specializing in suspenseful narratives. Translate the following text to {targetLanguage}. Maintain the tension, pacing, and atmospheric elements crucial to mystery stories. Preserve clues, red herrings, and logical deductions accurately. Keep investigative terminology and procedural details precise. Convey psychological tension, fear, and anticipation while maintaining clarity for readers to follow the plot. Adapt cultural references to crime, law enforcement, and social contexts appropriately.',
     isDefault: true
   },
   novel_scifi: {
     name: '科幻小說模式',
     description: '適合科幻小說，平衡科學概念和想像力',
-    systemPrompt: 'You are a science fiction translator specializing in futuristic and technological narratives. Translate the following text to {targetLanguage}. Maintain scientific accuracy where applicable while preserving speculative and imaginative elements. Keep technological terminology consistent and comprehensible. Convey the wonder of scientific discovery and future possibilities. Preserve world-building elements related to advanced civilizations, space exploration, and technological concepts. Adapt scientific and cultural concepts appropriately while maintaining the visionary aspect of the genre. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a science fiction translator specializing in futuristic and technological narratives. Translate the following text to {targetLanguage}. Maintain scientific accuracy where applicable while preserving speculative and imaginative elements. Keep technological terminology consistent and comprehensible. Convey the wonder of scientific discovery and future possibilities. Preserve world-building elements related to advanced civilizations, space exploration, and technological concepts. Adapt scientific and cultural concepts appropriately while maintaining the visionary aspect of the genre.',
     isDefault: true
   },
   novel_historical: {
     name: '歷史小說模式',
     description: '適合歷史小說，保持時代感和文化背景',
-    systemPrompt: 'You are a historical fiction translator specializing in period literature. Translate the following text to {targetLanguage}. Maintain historical authenticity and period-appropriate language while remaining accessible to modern readers. Preserve cultural references, social customs, and historical context accurately. Keep historical figures, places, and events factually correct. Convey the atmosphere and mindset of the historical period while adapting archaic expressions for contemporary understanding. Balance historical accuracy with narrative flow and readability. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a historical fiction translator specializing in period literature. Translate the following text to {targetLanguage}. Maintain historical authenticity and period-appropriate language while remaining accessible to modern readers. Preserve cultural references, social customs, and historical context accurately. Keep historical figures, places, and events factually correct. Convey the atmosphere and mindset of the historical period while adapting archaic expressions for contemporary understanding. Balance historical accuracy with narrative flow and readability.',
     isDefault: true
   },
   novel_literary: {
     name: '文學小說模式',
     description: '適合純文學作品，注重文字藝術和深層意涵',
-    systemPrompt: 'You are a literary translator specializing in high-quality literary fiction. Translate the following text to {targetLanguage}. Focus on preserving the artistic and poetic qualities of the prose. Maintain complex themes, symbolic meanings, and metaphorical language. Pay special attention to rhythm, style, and the author\'s unique voice. Preserve literary devices such as irony, symbolism, and stream of consciousness. Convey philosophical and psychological depth while maintaining the aesthetic beauty of the original text. Prioritize literary merit and artistic expression over literal translation. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a literary translator specializing in high-quality literary fiction. Translate the following text to {targetLanguage}. Focus on preserving the artistic and poetic qualities of the prose. Maintain complex themes, symbolic meanings, and metaphorical language. Pay special attention to rhythm, style, and the author\'s unique voice. Preserve literary devices such as irony, symbolism, and stream of consciousness. Convey philosophical and psychological depth while maintaining the aesthetic beauty of the original text. Prioritize literary merit and artistic expression over literal translation.',
     isDefault: true
   },
   technical: {
     name: '科技模式',
     description: '適合技術文件翻譯，保持專業術語準確性',
-    systemPrompt: 'You are a technical translator specializing in technology and scientific documents. Translate the following text to {targetLanguage}. Maintain technical accuracy, use proper terminology, and preserve the formal tone. Keep technical terms, API names, code snippets, and specifications unchanged when they are industry standards. Ensure clarity and precision for technical readers. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a technical translator specializing in technology and scientific documents. Translate the following text to {targetLanguage}. Maintain technical accuracy, use proper terminology, and preserve the formal tone. Keep technical terms, API names, code snippets, and specifications unchanged when they are industry standards. Ensure clarity and precision for technical readers.',
     isDefault: true
   },
   academic: {
     name: '學術模式',
     description: '適合學術論文翻譯，保持嚴謹性',
-    systemPrompt: 'You are an academic translator specializing in scholarly works. Translate the following text to {targetLanguage}. Maintain academic rigor, preserve citations, methodology descriptions, and formal academic tone. Use appropriate academic vocabulary and ensure logical flow of arguments. Keep proper nouns, research terms, and statistical data accurate. Only return the translated text without any explanations.',
+    rolePrompt: 'You are an academic translator specializing in scholarly works. Translate the following text to {targetLanguage}. Maintain academic rigor, preserve citations, methodology descriptions, and formal academic tone. Use appropriate academic vocabulary and ensure logical flow of arguments. Keep proper nouns, research terms, and statistical data accurate.',
     isDefault: true
   },
   business: {
     name: '商業模式',
     description: '適合商業文件翻譯，保持專業語調',
-    systemPrompt: 'You are a business translator specializing in corporate communications. Translate the following text to {targetLanguage}. Maintain professional tone, business terminology, and corporate etiquette. Adapt cultural business practices appropriately while preserving the original intent. Focus on clarity and professional impact. Only return the translated text without any explanations.',
+    rolePrompt: 'You are a business translator specializing in corporate communications. Translate the following text to {targetLanguage}. Maintain professional tone, business terminology, and corporate etiquette. Adapt cultural business practices appropriately while preserving the original intent. Focus on clarity and professional impact.',
     isDefault: true
   }
 };
@@ -239,7 +262,7 @@ async function getExpertModePrompts() {
   for (const [key, mode] of Object.entries(DEFAULT_EXPERT_MODE_PROMPTS)) {
     enhancedDefaultModes[key] = {
       ...mode,
-      systemPrompt: addSeparatorPreservationToPrompt(mode.systemPrompt)
+      systemPrompt: await buildSystemPrompt(mode.rolePrompt, 'TARGET_LANGUAGE_PLACEHOLDER')
     };
   }
   
@@ -260,7 +283,7 @@ async function translateWithOpenAI(text, targetLanguage, apiKey, model = 'gpt-4o
 
   const allExpertModes = await getExpertModePrompts();
   const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
-  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+  const systemPrompt = await buildSystemPrompt(expertPrompt.rolePrompt || expertPrompt.systemPrompt, languageNames[targetLanguage] || targetLanguage);
 
   // Get debug mode setting
   const debugMode = await chrome.storage.sync.get(['debugMode']).then(r => r.debugMode || false);
@@ -382,7 +405,7 @@ async function translateWithClaude(text, targetLanguage, apiKey, model = 'claude
 
   const allExpertModes = await getExpertModePrompts();
   const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
-  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+  const systemPrompt = await buildSystemPrompt(expertPrompt.rolePrompt || expertPrompt.systemPrompt, languageNames[targetLanguage] || targetLanguage);
 
   const response = await fetch(API_ENDPOINTS.claude, {
     method: 'POST',
@@ -464,7 +487,7 @@ async function translateWithGemini(text, targetLanguage, apiKey, model = 'gemini
 
   const allExpertModes = await getExpertModePrompts();
   const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
-  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+  const systemPrompt = await buildSystemPrompt(expertPrompt.rolePrompt || expertPrompt.systemPrompt, languageNames[targetLanguage] || targetLanguage);
 
   const url = `${API_ENDPOINTS.gemini}${model}:generateContent?key=${apiKey}`;
 
@@ -570,7 +593,7 @@ async function translateWithOpenRouter(text, targetLanguage, apiKey, model = 'me
 
   const allExpertModes = await getExpertModePrompts();
   const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
-  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+  const systemPrompt = await buildSystemPrompt(expertPrompt.rolePrompt || expertPrompt.systemPrompt, languageNames[targetLanguage] || targetLanguage);
 
   const response = await fetch(API_ENDPOINTS.openrouter, {
     method: 'POST',
@@ -683,7 +706,7 @@ async function translateWithOllama(text, targetLanguage, apiKey = '', model = 'l
 
   const allExpertModes = await getExpertModePrompts();
   const expertPrompt = allExpertModes[expertMode] || allExpertModes.general;
-  const systemPrompt = expertPrompt.systemPrompt.replace('{targetLanguage}', languageNames[targetLanguage] || targetLanguage);
+  const systemPrompt = await buildSystemPrompt(expertPrompt.rolePrompt || expertPrompt.systemPrompt, languageNames[targetLanguage] || targetLanguage);
 
   const response = await fetch(API_ENDPOINTS.ollama, {
     method: 'POST',
@@ -771,6 +794,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ expertModes: {}, error: error.message });
     });
     return true; // 表示異步響應
+  } else if (request.action === 'getDefaultCommonInstructions') {
+    sendResponse({ instructions: COMMON_TRANSLATION_INSTRUCTIONS.trim() });
+    return false;
   } else if (request.action === 'saveExpertMode') {
     saveExpertMode(request).then(sendResponse).catch(error => {
       console.error('Save expert mode error in background:', error);
@@ -849,6 +875,8 @@ async function handleTranslation(request) {
 
     const elapsedTime = Date.now() - startTime;
     
+    // Translation result is now clean from source - no post-processing needed
+
     // Debug log successful translation
     await debugLog('Background Translation Success:', {
       api: selectedApi,

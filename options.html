@@ -230,6 +230,20 @@
                 </label>
                 <small class="help-text" data-i18n="debug_mode_help">When enabled, API requests/responses, translation process and other detailed information will be logged to browser console</small>
             </div>
+            
+            <div class="form-group" id="common-prompt-editor" style="display: none;">
+                <label for="common-instructions" data-i18n="common_instructions_label">Common Translation Instructions</label>
+                <textarea 
+                    id="common-instructions" 
+                    rows="10" 
+                    data-i18n-placeholder="common_instructions_placeholder"
+                    style="width: 100%; font-family: monospace; font-size: 12px; line-height: 1.4;"></textarea>
+                <small class="help-text" data-i18n="common_instructions_help">These instructions will be automatically appended to all expert mode prompts. Changes take effect immediately.</small>
+                <div style="margin-top: 10px;">
+                    <button type="button" id="reset-common-prompt" class="secondary-button" data-i18n="reset_to_default">Reset to Default</button>
+                    <button type="button" id="apply-common-prompt" class="primary-button" data-i18n="apply_changes">Apply Changes</button>
+                </div>
+            </div>
         </div>
 
         <div class="button-group">

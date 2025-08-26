@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Chrome Extension (Manifest v3) that provides AI-powered webpage translation using five AI services including local AI.
+This is a Chrome Extension (Manifest v3) that provides AI-powered webpage translation using five AI services including local AI. The extension uses a **modular architecture** where the content script is divided into specialized modules.
 
 ### Core Architecture Components
 
@@ -28,27 +28,115 @@ This is a Chrome Extension (Manifest v3) that provides AI-powered webpage transl
 - API connection testing functionality
 - Message routing between content script and options page
 
-**Content Script (`js/content.js`)**
-- Injected into all web pages via manifest
-- Block-level DOM element processing (not sentence-by-sentence)
-- Floating button UI with pill-shaped design (translation + language selection)
-- Custom error modal system (no browser alerts)
-- State management for translation status and progress
+**Modular Content Script Architecture**
+The content script is now modularized into 8 specialized modules plus a main orchestrator:
+
+1. **`js/modules/state.js`** - Global state management
+   - Centralized state storage (translation status, settings, UI state)
+   - State persistence and reset functionality
+   - Domain-specific state tracking
+
+2. **`js/modules/debug.js`** - Debug utilities and i18n
+   - Debug logging with conditional output
+   - Internationalization initialization for content scripts
+   - Floating message notifications
+   - Localization utilities
+
+3. **`js/modules/languageDetection.js`** - Language detection
+   - Automatic source language detection
+   - Skip translation if already in target language
+   - Configurable detection character limits
+
+4. **`js/modules/translationAPI.js`** - Translation API interface
+   - API communication with background service
+   - Batch text processing and cleanup
+   - Translation result parsing and error handling
+
+5. **`js/modules/modal.js`** - Error modal system
+   - Custom modal dialogs (no browser alerts)
+   - Error categorization and user-friendly messages
+   - Modal lifecycle management
+
+6. **`js/modules/floatingButton.js`** - Floating UI
+   - Pill-shaped floating button (translation + language selection)
+   - Language menu management
+   - Button state updates and styling
+
+7. **`js/modules/autoTranslate.js`** - Auto-translation
+   - Automatic translation on page load
+   - SPA navigation detection
+   - Auto-translate toggle functionality
+
+8. **`js/modules/translation.js`** - Translation processing
+   - Block-level DOM element identification
+   - Intelligent batch processing
+   - Translation display and restoration
+
+9. **`js/content.js`** - Main orchestrator
+   - Module loading coordination using `waitForModules()` pattern
+   - Initialization sequence management
+   - Message handling between background and modules
 
 **Options Page (`options.html` + `js/options.js`)**
 - Dynamic UI that shows only selected API service's settings
 - Supports 55+ AI models across all five services
 - Model categorization (fast/balanced/powerful)
+- Expert mode management with custom prompts
 - API key management with visibility toggles
+
+**Internationalization (`js/i18n.js`)**
+- Multi-language support (English, Traditional Chinese, Japanese)
+- Message localization system with fallbacks
+- Interface language persistence in Chrome storage
+- Cross-context compatibility (browser, service worker, modules)
+
+### Module Loading Pattern
+
+The content script uses a sophisticated module loading pattern:
+
+```javascript
+const waitForModules = () => {
+  return new Promise((resolve) => {
+    const checkModules = () => {
+      if (window.TransCraftState && 
+          window.TransCraftDebug && 
+          window.TransCraftLanguageDetection &&
+          window.TransCraftTranslationAPI &&
+          window.TransCraftModal &&
+          window.TransCraftFloatingButton &&
+          window.TransCraftAutoTranslate &&
+          window.TransCraftTranslation) {
+        resolve();
+      } else {
+        setTimeout(checkModules, 50);
+      }
+    };
+    checkModules();
+  });
+};
+```
+
+**Module Loading Order (from manifest.json):**
+1. `js/i18n.js` - Internationalization foundation
+2. `js/modules/state.js` - State management
+3. `js/modules/debug.js` - Debug utilities  
+4. `js/modules/languageDetection.js` - Language detection
+5. `js/modules/translationAPI.js` - API interface
+6. `js/modules/modal.js` - Modal system
+7. `js/modules/floatingButton.js` - UI components
+8. `js/modules/autoTranslate.js` - Auto-translation
+9. `js/modules/translation.js` - Translation logic
+10. `js/content.js` - Main orchestrator
 
 ### Key Technical Patterns
 
 **Translation Flow:**
 1. Content script identifies translatable block elements (P, H1-H6, LI, TD, etc.)
-2. Dynamically batches text based on character length and element count limits
-3. Combines text using `<<TRANSLATE_SEPARATOR>>` delimiter
-4. Background worker calls selected AI service API
-5. Content script displays translations below original text
+2. Language detection module checks if translation is needed
+3. Translation module batches text based on character length and element count limits
+4. Combines text using `<<TRANSLATE_SEPARATOR>>` delimiter
+5. Background worker calls selected AI service API
+6. Content script displays translations below original text
 
 **Error Classification:**
 - `QUOTA_EXCEEDED`: API billing/quota issues
@@ -62,6 +150,12 @@ This is a Chrome Extension (Manifest v3) that provides AI-powered webpage transl
 - Progress tracking during batch translation
 - Language persistence via Chrome storage
 
+**Expert Mode System:**
+- Customizable translation prompts for different content types
+- Built-in modes: General, Novel (Romance, Fantasy, etc.), Technical, Academic, Business
+- User-defined custom modes with `{targetLanguage}` placeholders
+- Common prompt instructions appended to all modes
+
 ### Data Storage Structure
 
 Chrome Storage Sync stores:
@@ -71,8 +165,17 @@ Chrome Storage Sync stores:
   apiKeys: { [service]: 'key_value' },
   selectedModel: 'model_identifier',
   targetLanguage: 'zh-TW'|'en'|'ja'|etc,
+  expertMode: 'general'|'novel_romance'|'technical'|etc,
   maxBatchLength: 8000,    // Default: 8000 characters per batch
-  maxBatchElements: 20     // Default: 20 elements per batch
+  maxBatchElements: 20,    // Default: 20 elements per batch
+  requestTimeout: 60,      // Default: 60 seconds per request
+  languageDetectionEnabled: true,
+  languageDetectionChars: 600,
+  debugMode: false,
+  interfaceLanguage: 'en'|'zh-TW'|'ja',
+  autoTranslateEnabled: false,
+  expertModes: { /* custom expert modes */ },
+  commonPromptInstructions: '/* common translation instructions */'
 }
 ```
 
@@ -123,10 +226,12 @@ Required permissions in manifest.json:
 - All API calls are proxied through background script for security
 - Custom modal system prevents browser alert() interruptions
 - Translation state persists across page navigation until manually cleared
+- Modular architecture allows for easy maintenance and feature additions
+- Each module exposes its functionality via `window.TransCraft*` global objects
 
 ## Batch Processing Details
 
-The extension now uses intelligent batch processing that considers both text length and element count:
+The extension uses intelligent batch processing that considers both text length and element count:
 
 **Default Limits:**
 - Maximum 8000 characters per batch
@@ -139,3 +244,17 @@ The extension now uses intelligent batch processing that considers both text len
 3. Progress is tracked accurately based on processed elements
 4. Smaller batches provide better stability for complex content
 5. Larger batches provide faster translation for simple content
+
+## Language Detection System
+
+**Features:**
+- Automatic source language detection before translation
+- Skip translation if content is already in target language
+- Configurable character sample size (default: 600 characters)
+- User can enable/disable via options page
+
+**Implementation:**
+- Samples text from multiple DOM elements
+- Uses AI service for language detection
+- Shows user-friendly notifications when translation is skipped
+- Preserves detection results to avoid redundant API calls

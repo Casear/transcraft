@@ -7,10 +7,13 @@ Professional Chrome extension that provides intelligent webpage translation usin
 - 🌐 **Real-time Webpage Translation** - Translate entire webpages while preserving original formatting
 - 🤖 **Multi-AI Service Support** - Choose from OpenAI, Claude, Gemini, OpenRouter, or Ollama (local)
 - 🎯 **Expert Translation Modes** - Specialized modes for novels, technical docs, academic papers, and more
+- 🧠 **Intelligent Language Detection** - Automatically detect source language and skip unnecessary translations
 - 🚀 **Intelligent Batch Processing** - Configurable batching for optimal performance and cost
 - 🎨 **Elegant Floating UI** - Non-intrusive pill-shaped button with language selection
 - 🔄 **Instant Toggle** - Switch between original and translated text seamlessly
+- 🔄 **Auto-Translate Mode** - Automatically translate new pages as you browse
 - 💾 **Smart Memory** - Remembers your preferences and settings across sessions
+- 🌍 **Multi-Language Interface** - Support for English, Traditional Chinese, and Japanese interfaces
 - 🛡️ **Error Handling** - Robust error management with user-friendly notifications
 
 ## 🚀 Installation
@@ -57,10 +60,18 @@ Professional Chrome extension that provides intelligent webpage translation usin
 
 ## 🔧 Advanced Configuration
 
+### Language Detection Settings
+Smart translation optimization:
+- **Auto Language Detection**: Skip translation if content is already in target language
+- **Detection Sample Size**: Configurable character limit for language detection (default: 600 characters)
+- **Smart Skip**: Avoid unnecessary API calls when content doesn't need translation
+
 ### Batch Processing Settings
 Optimize performance and API usage:
-- **Batch Size**: 2,000-16,000 characters (default: 8,000)
-- **Element Count**: 5-50 elements per batch (default: 20)
+- **Batch Size**: 1,000-60,000 characters (default: 8,000)
+- **Element Count**: 1-50 elements per batch (default: 20)
+- **Request Timeout**: 15-120 seconds per request (default: 60 seconds)
+- **Auto-Adjust**: Automatically optimize batch size based on selected AI model
 - **Strategy**: Smaller batches = more stable, larger batches = faster
 
 ### Custom Expert Modes
@@ -68,6 +79,12 @@ Create your own specialized translation modes:
 1. Go to Settings → Expert Mode Management
 2. Click "Add Expert Mode"
 3. Define custom system prompts with `{targetLanguage}` placeholder
+4. Set common translation instructions that apply to all modes
+
+### Interface Customization
+- **Multi-Language Interface**: Choose between English, Traditional Chinese, or Japanese
+- **Debug Mode**: Enable detailed logging for troubleshooting
+- **Auto-Translate**: Toggle automatic translation on new page loads
 
 ## 🌍 Supported Languages
 
@@ -127,11 +144,41 @@ Create your own specialized translation modes:
 
 ## 🛠️ Technical Architecture
 
+TransCraft uses a sophisticated **modular architecture** for maintainability and performance:
+
+### Core Architecture
 - **Manifest V3**: Modern Chrome extension architecture
-- **Vanilla JavaScript**: No external dependencies
+- **Vanilla JavaScript**: No external dependencies or build process required
+- **Modular Content Script**: 8 specialized modules + main orchestrator
 - **Block-level Processing**: Intelligent DOM element identification
 - **Custom Error Handling**: Categorized error types with specific solutions
 - **Chrome Storage Sync**: Cross-device settings synchronization
+
+### Modular Design
+The content script is organized into specialized modules:
+- **State Management**: Centralized application state
+- **Debug & i18n**: Logging and internationalization
+- **Language Detection**: Smart source language identification  
+- **Translation API**: Background service communication
+- **Modal System**: User-friendly error dialogs
+- **Floating UI**: Non-intrusive interface components
+- **Auto-Translate**: Automatic page translation
+- **Translation Engine**: Core translation logic
+
+### Module Loading Pattern
+```javascript
+// Sophisticated module coordination
+const waitForModules = () => {
+  // Wait for all modules to load before initialization
+  // Ensures proper dependency resolution
+};
+```
+
+### Key Benefits
+- **Maintainable**: Clear separation of concerns
+- **Extensible**: Easy to add new features
+- **Reliable**: Robust error handling and state management
+- **Performance**: Optimized batch processing and caching
 
 ## 🦙 Ollama Local AI Setup
 
@@ -179,7 +226,9 @@ ollama pull mistral:7b         # 4.1GB RAM - Efficient
 - **"Please configure API Key"**: Set up your API key in Settings (not needed for Ollama)
 - **"Translation failed"**: Check your internet connection and API key validity
 - **"Extension context invalid"**: Refresh the page after extension updates
+- **"Translation Skipped"**: Content is already in target language (language detection working)
 - **Floating button not visible**: Check if the page allows content scripts
+- **Interface in wrong language**: Change interface language in Settings → Language Settings
 
 ### OpenRouter-Specific Issues
 - **"No endpoints found"**: Go to [Privacy Settings](https://openrouter.ai/settings/privacy) and enable "Allow training on prompts"

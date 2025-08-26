@@ -29,7 +29,18 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["js/i18n.js", "js/content.js"],
+      "js": [
+        "js/i18n.js",
+        "js/modules/state.js",
+        "js/modules/debug.js", 
+        "js/modules/languageDetection.js",
+        "js/modules/translationAPI.js",
+        "js/modules/modal.js",
+        "js/modules/floatingButton.js",
+        "js/modules/autoTranslate.js",
+        "js/modules/translation.js",
+        "js/content.js"
+      ],
       "css": ["css/content.css"]
     }
   ],

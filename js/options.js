@@ -20,6 +20,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     const settingsTitle = document.getElementById('settings-title');
     const debugSection = document.getElementById('debug-section');
     const debugModeCheckbox = document.getElementById('debug-mode-checkbox');
+    const commonPromptEditor = document.getElementById('common-prompt-editor');
+    const commonInstructionsTextarea = document.getElementById('common-instructions');
+    const resetCommonPromptButton = document.getElementById('reset-common-prompt');
+    const applyCommonPromptButton = document.getElementById('apply-common-prompt');
     let titleClickCount = 0;
     let titleClickTimer = null;
     
@@ -275,7 +279,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             'requestTimeout',
             'debugMode',
             'enableLanguageDetection',
-            'languageDetectionChars'
+            'languageDetectionChars',
+            'customCommonInstructions'
         ]);
 
         if (settings.selectedApi) {
@@ -339,7 +344,16 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Show debug section if debug mode was previously enabled
             if (settings.debugMode) {
                 debugSection.style.display = 'block';
+                commonPromptEditor.style.display = 'block';
             }
+        }
+        
+        // Load common instructions
+        if (settings.customCommonInstructions !== undefined) {
+            commonInstructionsTextarea.value = settings.customCommonInstructions;
+        } else {
+            // Load default instructions from background script
+            await loadDefaultCommonInstructions();
         }
         
         // Load language detection setting
@@ -912,6 +926,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             ollamaKey.style.backgroundColor = '#f5f5f5';
         }
         
+        // Update elements with data-i18n-placeholder attributes
+        const placeholderElements = document.querySelectorAll('[data-i18n-placeholder]');
+        placeholderElements.forEach(element => {
+            const key = element.getAttribute('data-i18n-placeholder');
+            if (key && window.i18n.getMessage(key)) {
+                element.placeholder = window.i18n.getMessage(key);
+            }
+        });
+        
         // Update modal content
         updateModalContent();
     }
@@ -981,6 +1004,43 @@ document.addEventListener('DOMContentLoaded', async function() {
             updateUI();
         }
     }
+    
+    // Common prompt functions
+    async function loadDefaultCommonInstructions() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getDefaultCommonInstructions' });
+            if (response && response.instructions) {
+                commonInstructionsTextarea.value = response.instructions;
+            }
+        } catch (error) {
+            console.error('Failed to load default common instructions:', error);
+        }
+    }
+    
+    async function applyCommonPromptChanges() {
+        const customInstructions = commonInstructionsTextarea.value.trim();
+        await chrome.storage.sync.set({ customCommonInstructions: customInstructions });
+        showStatus('Common instructions updated successfully!', 'success');
+    }
+    
+    async function resetCommonPromptToDefault() {
+        await chrome.storage.sync.remove('customCommonInstructions');
+        await loadDefaultCommonInstructions();
+        showStatus('Common instructions reset to default!', 'success');
+    }
+    
+    // Debug mode toggle handler
+    debugModeCheckbox.addEventListener('change', () => {
+        if (debugModeCheckbox.checked) {
+            commonPromptEditor.style.display = 'block';
+        } else {
+            commonPromptEditor.style.display = 'none';
+        }
+    });
+    
+    // Common prompt event listeners
+    resetCommonPromptButton.addEventListener('click', resetCommonPromptToDefault);
+    applyCommonPromptButton.addEventListener('click', applyCommonPromptChanges);
     
     // Initialize interface language first
     await loadInterfaceLanguage();
