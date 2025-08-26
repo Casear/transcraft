@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     let titleClickCount = 0;
     let titleClickTimer = null;
     
+    // Language detection elements
+    const languageDetectionCheckbox = document.getElementById('language-detection-checkbox');
+    
     // Expert modes management elements
     const expertModesList = document.getElementById('expert-modes-list');
     const addExpertModeButton = document.getElementById('add-expert-mode-button');
@@ -269,7 +272,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             'maxBatchLength',
             'maxBatchElements',
             'requestTimeout',
-            'debugMode'
+            'debugMode',
+            'enableLanguageDetection'
         ]);
 
         if (settings.selectedApi) {
@@ -335,6 +339,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 debugSection.style.display = 'block';
             }
         }
+        
+        // Load language detection setting
+        languageDetectionCheckbox.checked = settings.enableLanguageDetection !== false;
     }
 
     function updateModelOptions(selectedApi) {
@@ -611,7 +618,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             maxBatchLength: maxBatchLength,
             maxBatchElements: maxBatchElements,
             requestTimeout: requestTimeout,
-            debugMode: debugModeCheckbox.checked
+            debugMode: debugModeCheckbox.checked,
+            enableLanguageDetection: languageDetectionCheckbox.checked
         });
 
         showStatus('設定已儲存', 'success');
