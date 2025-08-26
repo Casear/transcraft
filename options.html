@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>TransCraft 設定</title>
+    <link rel="stylesheet" href="css/options.css">
+</head>
+<body>
+    <div class="container">
+        <h1>TransCraft 設定</h1>
+        
+        <div class="section">
+            <h2>選擇翻譯服務</h2>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="api" value="openai" id="openai-radio">
+                    OpenAI (ChatGPT)
+                </label>
+                <label>
+                    <input type="radio" name="api" value="claude" id="claude-radio">
+                    Claude (Anthropic)
+                </label>
+                <label>
+                    <input type="radio" name="api" value="gemini" id="gemini-radio">
+                    Gemini (Google)
+                </label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 id="api-section-title">API Key 設定</h2>
+            <p class="section-description">請先選擇翻譯服務，然後設定對應的 API Key</p>
+            
+            <div class="api-section" id="openai-section" style="display: none;">
+                <h3>🤖 OpenAI API Key</h3>
+                <input type="password" id="openai-key" placeholder="sk-proj-...">
+                <p class="help-text">
+                    從 <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a> 取得
+                    <br><small>支援 GPT-4o、GPT-4o Mini、GPT-3.5 Turbo</small>
+                </p>
+            </div>
+
+            <div class="api-section" id="claude-section" style="display: none;">
+                <h3>🧠 Claude API Key</h3>
+                <input type="password" id="claude-key" placeholder="sk-ant-...">
+                <p class="help-text">
+                    從 <a href="https://console.anthropic.com/api-keys" target="_blank">Anthropic Console</a> 取得
+                    <br><small>支援 Claude 3.5 Sonnet、Claude 3 Haiku</small>
+                </p>
+            </div>
+
+            <div class="api-section" id="gemini-section" style="display: none;">
+                <h3>✨ Gemini API Key</h3>
+                <input type="password" id="gemini-key" placeholder="AIza...">
+                <p class="help-text">
+                    從 <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> 取得
+                    <br><small>支援 Gemini 1.5 Flash、Gemini 1.5 Pro</small>
+                </p>
+            </div>
+
+            <div class="no-service-selected" id="no-service-message">
+                <div class="placeholder-icon">⚙️</div>
+                <p>請先選擇翻譯服務</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>預設設定</h2>
+            
+            <div class="form-group">
+                <label for="target-language">目標語言</label>
+                <select id="target-language">
+                    <option value="zh-TW">繁體中文</option>
+                    <option value="zh-CN">簡體中文</option>
+                    <option value="en">英文</option>
+                    <option value="ja">日文</option>
+                    <option value="ko">韓文</option>
+                    <option value="es">西班牙文</option>
+                    <option value="fr">法文</option>
+                    <option value="de">德文</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="model-selection-group" style="display: none;">
+                <label for="model-select">AI 模型</label>
+                <select id="model-select">
+                    <!-- 動態填充選項 -->
+                </select>
+                <div class="model-info" id="model-info">
+                    <!-- 動態顯示模型說明 -->
+                </div>
+            </div>
+
+            <div class="no-model-available" id="no-model-message">
+                <div class="placeholder-icon">🤖</div>
+                <p>請先選擇翻譯服務以查看可用的 AI 模型</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>翻譯批次設定</h2>
+            <p class="section-description">調整翻譯處理的批次大小，影響翻譯速度和 API 使用效率</p>
+            
+            <div class="form-group">
+                <label for="max-batch-length">批次最大字元數</label>
+                <input type="number" id="max-batch-length" min="1000" max="32000" step="1000" value="8000">
+                <small class="help-text">單次翻譯請求的最大字元數，建議範圍：2000-16000</small>
+            </div>
+
+            <div class="form-group">
+                <label for="max-batch-elements">批次最大元素數</label>
+                <input type="number" id="max-batch-elements" min="5" max="50" step="5" value="20">
+                <small class="help-text">單次翻譯請求的最大元素數量，建議範圍：10-30</small>
+            </div>
+
+            <div class="batch-info">
+                <div class="info-item">
+                    <strong>較小批次：</strong>翻譯速度較慢，但更穩定，適合複雜內容
+                </div>
+                <div class="info-item">
+                    <strong>較大批次：</strong>翻譯速度較快，但可能影響品質，適合簡單內容
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>專家模式管理</h2>
+            <p class="section-description">自定義不同類型內容的翻譯提示詞</p>
+            
+            <div class="expert-modes-list" id="expert-modes-list">
+                <!-- 動態填充專家模式列表 -->
+            </div>
+            
+            <button id="add-expert-mode-button" class="secondary-button">
+                <span>+ 新增專家模式</span>
+            </button>
+        </div>
+
+        <div class="button-group">
+            <button id="save-button" class="primary-button">儲存設定</button>
+            <button id="test-button" class="secondary-button">測試連接</button>
+        </div>
+
+        <div id="status-message" class="status-message"></div>
+    </div>
+
+    <!-- 專家模式編輯模態窗 -->
+    <div id="expert-mode-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">新增專家模式</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="expert-mode-id">模式 ID</label>
+                    <input type="text" id="expert-mode-id" placeholder="例如: novel, technical, academic">
+                    <small class="help-text">唯一識別碼，只能包含英文字母、數字和底線</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="expert-mode-name">模式名稱</label>
+                    <input type="text" id="expert-mode-name" placeholder="例如: 小說模式">
+                </div>
+                
+                <div class="form-group">
+                    <label for="expert-mode-description">模式描述</label>
+                    <input type="text" id="expert-mode-description" placeholder="例如: 適合文學作品翻譯，保持文學性和情感表達">
+                </div>
+                
+                <div class="form-group">
+                    <label for="expert-mode-prompt">系統提示詞</label>
+                    <textarea id="expert-mode-prompt" rows="8" placeholder="例如: You are a literary translator specializing in novels and creative works. Translate the following text to {targetLanguage}..."></textarea>
+                    <small class="help-text">使用 {targetLanguage} 作為目標語言的佔位符</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" class="secondary-button">取消</button>
+                <button id="modal-save" class="primary-button">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/options.js"></script>
+</body>
+</html>

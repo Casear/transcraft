@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "TransCraft",
+  "version": "1.0.0",
+  "description": "Professional AI translation with expert modes for different content types",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/transcraft-16.png",
+      "48": "images/transcraft-48.png",
+      "128": "images/transcraft-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "js/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["js/content.js"],
+      "css": ["css/content.css"]
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {
+    "16": "images/transcraft-16.png",
+    "48": "images/transcraft-48.png",
+    "128": "images/transcraft-128.png"
+  }
+}
