@@ -204,17 +204,36 @@ async function translateText(text, apiConfig) {
       throw new Error('EXTENSION_CONTEXT_INVALID');
     }
     
-    const response = await chrome.runtime.sendMessage({
-      action: 'translate',
-      text: text,
-      targetLanguage: targetLanguage,
-      apiConfig: apiConfig,
-      expertMode: expertMode
+    const response = await new Promise((resolve, reject) => {
+      try {
+        chrome.runtime.sendMessage({
+          action: 'translate',
+          text: text,
+          targetLanguage: targetLanguage,
+          apiConfig: apiConfig,
+          expertMode: expertMode
+        }, (response) => {
+          // 檢查Chrome runtime錯誤
+          if (chrome.runtime.lastError) {
+            const errorMessage = chrome.runtime.lastError.message || JSON.stringify(chrome.runtime.lastError) || 'EXTENSION_CONTEXT_INVALID';
+            console.error('Chrome runtime error:', errorMessage);
+            reject(new Error(errorMessage));
+            return;
+          }
+          
+          // 檢查響應是否有效
+          if (!response) {
+            reject(new Error('NETWORK_ERROR: No response received'));
+            return;
+          }
+          
+          resolve(response);
+        });
+      } catch (error) {
+        console.error('Error sending message:', error);
+        reject(error);
+      }
     });
-    
-    if (!response) {
-      throw new Error('NETWORK_ERROR');
-    }
     
     if (response.error) {
       // 檢查不同類型的錯誤
