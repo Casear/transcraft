@@ -5,7 +5,8 @@
   "description": "Professional AI translation with expert modes for different content types",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://api.openai.com/*",

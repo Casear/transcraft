@@ -1,10 +1,10 @@
-// 調試和工具模組
-// 處理調試日誌和工具函數
+// Debug and Utilities Module
+// Handles debug logging and utility functions
 
-// 全域調試模式標誌
+// Global debug mode flag
 let debugMode = false;
 
-// 從存儲初始化調試模式
+// Initialize debug mode from storage
 async function initDebugMode() {
   try {
     const settings = await chrome.storage.sync.get(['debugMode']);
@@ -14,12 +14,12 @@ async function initDebugMode() {
   }
 }
 
-// 設定調試模式
+// Set debug mode
 function setDebugMode(enabled) {
   debugMode = enabled;
 }
 
-// 調試日誌工具
+// Debug logging utilities
 function debugLog(...args) {
   if (debugMode) {
     console.log('[TransCraft Debug]', ...args);
@@ -38,7 +38,7 @@ function debugError(...args) {
   }
 }
 
-// 獲取本地化訊息並備用
+// Get localized message with fallback
 function getLocalizedMessage(key, fallback = '') {
   if (window.i18nReady && window.i18n) {
     return window.i18n.getMessage(key);
@@ -46,7 +46,7 @@ function getLocalizedMessage(key, fallback = '') {
   return fallback;
 }
 
-// 為內容腳本初始化 i18n
+// Initialize i18n for content scripts
 async function initContentI18n() {
   try {
     await window.i18n.initI18n();
@@ -58,7 +58,7 @@ async function initContentI18n() {
   }
 }
 
-// 顯示浮動訊息工具
+// Show floating message utility
 function showFloatingMessage(message, duration = 2000) {
   const messageContainer = document.getElementById('ai-translation-message-container') || 
     (() => {
@@ -90,7 +90,7 @@ function showFloatingMessage(message, duration = 2000) {
   `;
   messageDiv.textContent = message;
 
-  // 如果尚未存在則添加動畫樣式
+  // Add animation styles if not already present
   if (!document.getElementById('floating-message-styles')) {
     const style = document.createElement('style');
     style.id = 'floating-message-styles';
@@ -117,7 +117,7 @@ function showFloatingMessage(message, duration = 2000) {
   }, duration + 500);
 }
 
-// 為 Chrome 擴充功能相容性將函數匯出到全域範圍
+// Export functions to global scope for Chrome extension compatibility
 window.TransCraftDebug = {
   initDebugMode,
   setDebugMode,

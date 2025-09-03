@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title data-i18n="extension_name">TransCraft</title>
+    <link rel="stylesheet" href="css/popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <h1 data-i18n="extension_name">TransCraft</h1>
+        
+        <div class="language-selector">
+            <label for="popup-target-language" data-i18n="target_language">Target Language:</label>
+            <select id="popup-target-language">
+                <!-- Dynamically populated with localized language names -->
+            </select>
+        </div>
+
+        <div class="expert-mode-selector">
+            <label for="popup-expert-mode" data-i18n="translation_mode">Translation Mode:</label>
+            <select id="popup-expert-mode">
+                <!-- 動態載入專家模式選項 -->
+            </select>
+        </div>
+
+        <button id="translate-button" class="translate-button">
+            <span id="button-text" data-i18n="translate_page">Translate Page</span>
+        </button>
+
+        <div class="footer">
+            <button id="settings-button" class="settings-link" data-i18n="settings">Settings</button>
+            <div class="api-status" id="api-status">
+                <span class="status-icon" id="status-icon">●</span>
+                <span id="status-text" data-i18n="checking">Checking...</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/popup.js"></script>
+</body>
+</html>

@@ -1,13 +1,13 @@
-// 翻譯模組
-// 處理主要的翻譯過程和協調
+// Translation Module
+// Handles the main translation process and coordination
 
-// 直接從全域範圍存取函數
+// Access functions from global scope directly
 
-// 主要翻譯函數
+// Main translation function
 async function translatePage(forceTranslation = false) {
   if (window.TransCraftState.isTranslating) return;
   
-  // 如果語言選單開啟則關閉
+  // Close language menu if open
   const languageMenu = document.getElementById('ai-translation-language-menu');
   if (languageMenu && languageMenu.classList.contains('show')) {
     window.TransCraftFloatingButton.closeLanguageMenu();
@@ -22,7 +22,7 @@ async function translatePage(forceTranslation = false) {
   const elements = window.TransCraftTranslationAPI.getTranslatableElements();
   const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'selectedModel', 'enableLanguageDetection']);
   
-  // 從狀態添加當前目標語言
+  // Add current target language from state
   apiConfig.targetLanguage = window.TransCraftState.targetLanguage;
   
   window.TransCraftDebug.debugLog('Translation request with target language:', apiConfig.targetLanguage);
@@ -32,12 +32,12 @@ async function translatePage(forceTranslation = false) {
     return;
   }
 
-  // 翻譯前的語言檢測
+  // Language detection before translation
   let skipCount = 0;
-  if (apiConfig.enableLanguageDetection !== false && !forceTranslation) { // 預設啟用且非強制翻譯
+  if (apiConfig.enableLanguageDetection !== false && !forceTranslation) { // Enabled by default and not force translation
     window.TransCraftDebug.debugLog('Language detection enabled, checking content...');
     
-    // 增強的抽樣策略以獲得更好的語言檢測
+    // Enhanced sampling strategy for better language detection
     window.TransCraftDebug.debugLog('📊 Starting text sampling for language detection...');
     const sampleTexts = [];
     const maxSamples = 10;
@@ -45,7 +45,7 @@ async function translatePage(forceTranslation = false) {
     
     window.TransCraftDebug.debugLog(`🔍 Analyzing ${elements.length} translatable elements for sampling`);
     
-    // 從頁面不同部分獲取多樣化的樣本
+    // Take diverse samples from different parts of the page
     for (let i = 0; i < Math.min(elements.length, maxSamples); i++) {
       const index = Math.floor((elements.length / maxSamples) * i);
       const text = elements[index]?.textContent?.trim();
@@ -60,7 +60,7 @@ async function translatePage(forceTranslation = false) {
     window.TransCraftDebug.debugLog(`✅ Collected ${sampleTexts.length} valid samples out of ${Math.min(elements.length, maxSamples)} attempts`);
     
     if (sampleTexts.length > 0) {
-      // 獲取更多文字以獲得更好的檢測，但限制總大小
+      // Take more text for better detection, but limit total size
       const combinedText = sampleTexts.join(' ');
       const settings = await chrome.storage.sync.get(['languageDetectionChars']);
       const detectionChars = settings.languageDetectionChars || 600;
@@ -73,7 +73,7 @@ async function translatePage(forceTranslation = false) {
       
       window.TransCraftDebug.debugLog('Detected language:', detectedLanguage, 'Target language:', window.TransCraftState.targetLanguage);
       
-      // 顯示檢測到的語言
+      // Display detected language
       window.TransCraftFloatingButton.displayDetectedLanguage(detectedLanguage);
       
       if (detectedLanguage && !window.TransCraftLanguageDetection.shouldTranslate(detectedLanguage, window.TransCraftState.targetLanguage)) {
@@ -92,7 +92,7 @@ async function translatePage(forceTranslation = false) {
         const targetLangName = langNames[window.TransCraftState.targetLanguage] || window.TransCraftState.targetLanguage;
         
         window.TransCraftModal.showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage, () => {
-          // 強制翻譯回調
+          // Force translation callback
           translatePage(true);
         });
         return;
@@ -103,20 +103,20 @@ async function translatePage(forceTranslation = false) {
   window.TransCraftState.isTranslating = true;
   window.TransCraftFloatingButton.updateFloatingButton('translating');
 
-  // 獲取批次設定
+  // Get batch settings
   const batchSettings = await chrome.storage.sync.get(['maxBatchLength', 'maxBatchElements', 'requestTimeout']);
   const maxBatchLength = batchSettings.maxBatchLength || 8000; // Default max 8000 chars
   const maxBatchElements = batchSettings.maxBatchElements || 20; // Default max 20 elements
-  const requestTimeout = (batchSettings.requestTimeout || 60) * 1000; // 轉換為毫秒，預設 60 秒
+  const requestTimeout = (batchSettings.requestTimeout || 60) * 1000; // Convert to milliseconds, default 60 seconds
   
-  // 首先在添加佔位符之前提取原始文字內容
+  // First extract original text content before adding placeholders
   const originalTexts = elements.map(element => element.textContent?.trim()).filter(text => text);
   
-  // 調試：記錄找到的元素詳細信息
+  // Debug: Log details about found elements
   window.TransCraftDebug.debugLog(`🔍 TRANSLATION PROCESSING: ${elements.length} elements found, ${originalTexts.length} have text`);
   
-  // 然後為所有元素添加載入佔位符
-  const elementIdMap = new Map(); // 存儲元素和 ID 映射
+  // Then add loading placeholders for all elements
+  const elementIdMap = new Map(); // Store element and ID mapping
   let placeholderIds = [];
   elements.forEach((element) => {
     const elementId = window.TransCraftTranslationAPI.addLoadingPlaceholder(element);
@@ -126,7 +126,7 @@ async function translatePage(forceTranslation = false) {
     }
   });
 
-  // 批次處理
+  // Process in batches
   const errors = [];
   let processedElements = 0;
   let successCount = 0;
@@ -137,7 +137,7 @@ async function translatePage(forceTranslation = false) {
     let batchLength = 0;
     let batchProcessedCount = 0;
     
-    // 在限制內建構批次
+    // Build batch within limits
     for (let i = processedElements; i < originalTexts.length && batchTexts.length < maxBatchElements; i++) {
       const element = elements[i];
       const text = originalTexts[i];
@@ -146,15 +146,15 @@ async function translatePage(forceTranslation = false) {
       batchProcessedCount++;
       
       if (text && (batchLength + text.length <= maxBatchLength || batchTexts.length === 0)) {
-        // 如果在大小限制內則添加到批次，或者如果是第一個元素（避免無限循環）
+        // Add to batch if within size limit, or if first element (to avoid infinite loop)
         batchTexts.push(text);
         batchElementIds.push(elementId);
         batchLength += text.length;
         
         window.TransCraftDebug.debugLog(`Added element ${i + 1}/${originalTexts.length} to batch (${text.length} chars, batch total: ${batchLength})`);
       } else {
-        // 停止添加到此批次
-        batchProcessedCount--; // 還不要將此元素計為已處理
+        // Stop adding to this batch
+        batchProcessedCount--; // Don't count this element as processed yet
         break;
       }
     }
@@ -169,22 +169,22 @@ async function translatePage(forceTranslation = false) {
         
         const translatedText = await window.TransCraftTranslationAPI.translateText(combinedText, apiConfig, requestTimeout);
         
-        // 分割翻譯
+        // Split the translations
         const translations = translatedText.split(/\n?<<TRANSLATE_SEPARATOR>>\n?/).filter(t => t.trim());
         
         window.TransCraftDebug.debugLog(`Received ${translations.length} translations for ${batchTexts.length} elements`);
         
-        // 將翻譯應用到元素
+        // Apply translations to elements
         translations.forEach((translation, index) => {
           if (index < batchElementIds.length) {
             const elementId = batchElementIds[index];
             const element = elementIdMap.get(elementId);
             
             
-            // 首先更新佔位符
+            // Update placeholder first
             window.TransCraftTranslationAPI.updatePlaceholderWithTranslation(elementId, translation);
             
-            // 然後添加到元素追蹤
+            // Then add to element tracking
             if (element) {
               window.TransCraftTranslationAPI.addTranslationToElement(element, translation);
             }
@@ -197,12 +197,12 @@ async function translatePage(forceTranslation = false) {
         window.TransCraftDebug.debugError('Translation error:', error);
         const errorMsg = error.message || error.toString();
         
-        // 移除失敗元素的載入佔位符
+        // Remove loading placeholders for failed elements
         batchElementIds.forEach(elementId => {
           window.TransCraftTranslationAPI.removeLoadingPlaceholder(elementId);
         });
         
-        // 追蹤錯誤
+        // Track errors
         batchTexts.forEach((text, index) => {
           if (index < batchElementIds.length) {
             const element = elementIdMap.get(batchElementIds[index]);
@@ -218,7 +218,7 @@ async function translatePage(forceTranslation = false) {
           }
         });
         
-        // 如果這是第一個批次且失敗，顯示特定錯誤
+        // If this is the first batch and it failed, show specific error
         if (errors.length === batchTexts.length && successCount === 0) {
           window.TransCraftState.isTranslating = false;
           
@@ -236,22 +236,22 @@ async function translatePage(forceTranslation = false) {
           return;
         }
         
-        // 即使這個批次失敗也繼續下一個批次
+        // Continue with next batch even if this one failed
         window.TransCraftDebug.debugLog(`Batch failed, continuing with next batch. Current success: ${successCount}, errors: ${errors.length}`);
       }
     } else if (batchProcessedCount > 0) {
-      // 如果沒有有效文字但檢查了一些元素，仍需推進進度以避免無限循環
+      // If no valid text but checked some elements, still need to advance progress to avoid infinite loop
       window.TransCraftDebug.debugLog(`Skipped ${batchProcessedCount} empty or invalid elements`)
     } else {
-      // 如果沒有處理任何元素，可能是邏輯錯誤，強制退出以避免無限循環
+      // If no elements were processed, might be logic error, force exit to avoid infinite loop
       console.warn('No elements processed in batch, forcing exit to avoid infinite loop');
       break;
     }
     
-    // 更新已處理元素，確保正確追蹤已處理元素計數
+    // Update processedElements, ensure correct tracking of processed element count
     processedElements += batchProcessedCount;
     
-    // 更新進度
+    // Update progress
     const progress = Math.min(100, (processedElements / originalTexts.length) * 100);
     window.TransCraftTranslationAPI.updateLoadingProgress(progress);
   }
@@ -261,11 +261,11 @@ async function translatePage(forceTranslation = false) {
   window.TransCraftFloatingButton.updateFloatingButton('translated');
   window.TransCraftState.autoTranslateCompleted = true;
 
-  // 顯示結果
+  // Show results
   if (errors.length > 0) {
     window.TransCraftModal.showTranslationErrorSummary(errors, successCount, originalTexts.length);
   } else if (successCount < originalTexts.length) {
-    // 如果沒有特定錯誤但有一些失敗，顯示一般訊息
+    // If no specific errors but some failures, show general message
     const failedCount = originalTexts.length - successCount;
     window.TransCraftModal.showErrorModal(
       window.TransCraftDebug.getLocalizedMessage('translation_failed', '部分內容未翻譯'), 
@@ -274,7 +274,7 @@ async function translatePage(forceTranslation = false) {
   }
 }
 
-// 將函數匯出到全域範圍
+// Export functions to global scope
 window.TransCraftTranslation = {
   translatePage
 };

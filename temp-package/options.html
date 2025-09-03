@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title data-i18n="extension_name">TransCraft</title>
+    <link rel="stylesheet" href="css/options.css">
+</head>
+<body>
+    <div class="container">
+        <h1 id="settings-title" style="cursor: default; user-select: none;" data-i18n="settings_title">TransCraft Settings</h1>
+        
+        <!-- Language Selection Section -->
+        <div class="section">
+            <h2 data-i18n="language_settings">Language Settings</h2>
+            <p class="section-description" data-i18n="language_settings_desc">Select the interface language for the extension</p>
+            <div class="form-group">
+                <label for="interface-language" data-i18n="interface_language">Interface Language</label>
+                <select id="interface-language">
+                    <option value="en">English</option>
+                    <option value="zh-TW">繁體中文</option>
+                    <option value="ja">日本語</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2 data-i18n="select_translation_service">Select Translation Service</h2>
+            <div class="form-group">
+                <label for="api-service-select" data-i18n="translation_service">Translation Service</label>
+                <select id="api-service-select">
+                    <option value="" data-i18n="please_select_service">Please select a service</option>
+                    <option value="openai">OpenAI (ChatGPT)</option>
+                    <option value="claude">Claude (Anthropic)</option>
+                    <option value="gemini">Gemini (Google)</option>
+                    <option value="openrouter">OpenRouter</option>
+                    <option value="ollama">Ollama (Local)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 id="api-section-title" data-i18n="api_key_settings">API Key Settings</h2>
+            <p class="section-description" data-i18n="please_select_service_first">Please select a translation service first, then configure the corresponding API Key</p>
+            
+            <div class="api-section" id="openai-section" style="display: none;">
+                <h3>🤖 OpenAI API Key</h3>
+                <input type="password" id="openai-key" placeholder="sk-proj-...">
+                <p class="help-text">
+                    從 <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a> 取得
+                    <br><small>支援 GPT-4o、GPT-4o Mini、GPT-3.5 Turbo</small>
+                </p>
+            </div>
+
+            <div class="api-section" id="claude-section" style="display: none;">
+                <h3>🧠 Claude API Key</h3>
+                <input type="password" id="claude-key" placeholder="sk-ant-...">
+                <p class="help-text">
+                    從 <a href="https://console.anthropic.com/api-keys" target="_blank">Anthropic Console</a> 取得
+                    <br><small>支援 Claude 3.5 Sonnet、Claude 3 Haiku</small>
+                </p>
+            </div>
+
+            <div class="api-section" id="gemini-section" style="display: none;">
+                <h3>✨ Gemini API Key</h3>
+                <input type="password" id="gemini-key" placeholder="AIza...">
+                <p class="help-text">
+                    從 <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a> 取得
+                    <br><small>支援 Gemini 1.5 Flash、Gemini 1.5 Pro</small>
+                </p>
+            </div>
+
+            <div class="api-section" id="openrouter-section" style="display: none;">
+                <h3>🌐 OpenRouter API Key</h3>
+                <input type="password" id="openrouter-key" placeholder="sk-or-v1-...">
+                <p class="help-text">
+                    從 <a href="https://openrouter.ai/keys" target="_blank">OpenRouter</a> 取得
+                    <br><small>支援 Claude、GPT、Llama、Gemini 等多種模型</small>
+                </p>
+                <div class="openrouter-setup-info">
+                    <details>
+                        <summary>⚠️ 重要設定步驟</summary>
+                        <ol>
+                            <li><strong>1. 獲取 API Key：</strong>到 <a href="https://openrouter.ai/keys" target="_blank">OpenRouter Keys</a> 創建 API Key</li>
+                            <li><strong>2. 配置隱私設定：</strong>到 <a href="https://openrouter.ai/settings/privacy" target="_blank">隱私設定</a></li>
+                            <li><strong>3. 啟用模型訓練：</strong>勾選 "Allow training on prompts" 或類似選項</li>
+                            <li><strong>4. 保存設定：</strong>確保設定已保存後再測試連接</li>
+                            <li><strong>5. 等待生效：</strong>設定可能需要幾分鐘才會生效</li>
+                        </ol>
+                        <p><small>💡 注意：如果不啟用 prompt training，某些免費模型將無法使用</small></p>
+                    </details>
+                </div>
+            </div>
+
+            <div class="api-section" id="ollama-section" style="display: none;">
+                <h3>🦙 Ollama 本地服務</h3>
+                <input type="text" id="ollama-key" placeholder="無需 API Key（本地運行）" disabled style="background-color: #f5f5f5;">
+                <p class="help-text">
+                    請確認 <a href="https://ollama.ai" target="_blank">Ollama</a> 已安裝並運行在 localhost:11434
+                    <br><small>本地 AI 模型，完全私密，無需網路連線</small>
+                </p>
+                <div class="ollama-setup-info">
+                    <details>
+                        <summary>📋 快速設定指南</summary>
+                        <ol>
+                            <li>下載並安裝 <a href="https://ollama.ai" target="_blank">Ollama</a></li>
+                            <li>開啟終端機執行：<code>ollama serve</code></li>
+                            <li>下載模型：<code>ollama pull llama3.1:8b</code></li>
+                            <li>測試連接：<code>ollama list</code></li>
+                        </ol>
+                    </details>
+                </div>
+            </div>
+
+            <div class="no-service-selected" id="no-service-message">
+                <div class="placeholder-icon">⚙️</div>
+                <p>請先選擇翻譯服務</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 data-i18n="default_settings">Default Settings</h2>
+            
+            <div class="form-group">
+                <label for="target-language" data-i18n="target_language">Target Language</label>
+                <select id="target-language">
+                    <option value="zh-TW">繁體中文</option>
+                    <option value="zh-CN">簡體中文</option>
+                    <option value="en">英文</option>
+                    <option value="ja">日文</option>
+                    <option value="ko">韓文</option>
+                    <option value="es">西班牙文</option>
+                    <option value="fr">法文</option>
+                    <option value="de">德文</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="model-selection-group" style="display: none;">
+                <label for="model-select" data-i18n="ai_model">AI Model</label>
+                <select id="model-select">
+                    <!-- 動態填充選項 -->
+                </select>
+                <div class="model-info" id="model-info">
+                    <!-- 動態顯示模型說明 -->
+                </div>
+            </div>
+
+            <div class="no-model-available" id="no-model-message">
+                <div class="placeholder-icon">🤖</div>
+                <p data-i18n="please_select_service_for_models">Please select a translation service to view available AI models</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 data-i18n="translation_batch_settings">Translation Batch Settings</h2>
+            <p class="section-description" data-i18n="batch_settings_desc">Adjust translation processing batch size, affects translation speed and API usage efficiency</p>
+            
+            <div class="form-group">
+                <label for="max-batch-length" data-i18n="batch_max_chars">Batch Maximum Characters</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="number" id="max-batch-length" min="1000" max="60000" step="1000" value="8000" style="flex: 1;">
+                    <button type="button" id="auto-adjust-batch-size" class="secondary-button" title="根據所選模型自動調整批次大小">
+                        🎯 <span data-i18n="auto_adjust">Auto Adjust</span>
+                    </button>
+                </div>
+                <small class="help-text" data-i18n="batch_max_chars_help">Maximum characters per translation request, range: 1000-60000. Click "Auto Adjust" to optimize batch size based on selected model</small>
+            </div>
+
+            <div class="form-group">
+                <label for="max-batch-elements" data-i18n="batch_max_elements">Batch Maximum Elements</label>
+                <input type="number" id="max-batch-elements" min="1" step="1" value="20">
+                <small class="help-text" data-i18n="batch_max_elements_help">Maximum number of elements per translation request, no upper limit, automatically controlled by character count</small>
+            </div>
+
+            <div class="form-group">
+                <label for="request-timeout" data-i18n="request_timeout">Translation Request Timeout (seconds)</label>
+                <input type="number" id="request-timeout" min="15" max="120" step="5" value="60">
+                <small class="help-text" data-i18n="request_timeout_help">Maximum wait time for a single translation request, recommended range: 30-60 seconds</small>
+            </div>
+
+            <div class="batch-info">
+                <div class="info-item">
+                    <strong data-i18n="smaller_batches">Smaller Batches:</strong><span data-i18n="smaller_batches">Slower translation speed, but more stable, suitable for complex content</span>
+                </div>
+                <div class="info-item">
+                    <strong data-i18n="larger_batches">Larger Batches:</strong><span data-i18n="larger_batches">Faster translation speed, but may affect quality, suitable for simple content</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 data-i18n="expert_mode_management">Expert Mode Management</h2>
+            <p class="section-description" data-i18n="expert_mode_desc">Customize translation prompts for different types of content</p>
+            
+            <div class="expert-modes-list" id="expert-modes-list">
+                <!-- 動態填充專家模式列表 -->
+            </div>
+            
+            <button id="add-expert-mode-button" class="secondary-button">
+                <span>+ 新增專家模式</span>
+            </button>
+        </div>
+
+        <div class="section">
+            <h2 data-i18n="language_detection">Language Detection</h2>
+            <p class="section-description" data-i18n="language_detection_desc">Automatically detect source language and skip translation if it matches the target language</p>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="language-detection-checkbox" checked>
+                    <span style="margin-left: 8px;" data-i18n="enable_language_detection">Enable Language Detection</span>
+                </label>
+                <small class="help-text" data-i18n="language_detection_help">When enabled, the extension will detect the source language and skip translation if it's already in the target language</small>
+            </div>
+
+            <div class="form-group">
+                <label for="language-detection-chars" data-i18n="detection_chars_limit">Detection Character Limit</label>
+                <input type="number" id="language-detection-chars" min="100" max="5000" step="100" value="600">
+                <small class="help-text" data-i18n="detection_chars_help">Number of characters to use for language detection (100-5000). Default: 600 characters</small>
+            </div>
+        </div>
+
+        <div class="section" id="debug-section" style="display: none;">
+            <h2 data-i18n="debug_mode">🐛 Debug Mode</h2>
+            <p class="section-description" data-i18n="debug_mode_desc">Developer option - When enabled, detailed debug information will be displayed in the console</p>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="debug-mode-checkbox">
+                    <span style="margin-left: 8px;" data-i18n="enable_debug_mode">Enable Debug Mode</span>
+                </label>
+                <small class="help-text" data-i18n="debug_mode_help">When enabled, API requests/responses, translation process and other detailed information will be logged to browser console</small>
+            </div>
+            
+            <div class="form-group" id="common-prompt-editor" style="display: none;">
+                <label for="common-instructions" data-i18n="common_instructions_label">Common Translation Instructions</label>
+                <textarea 
+                    id="common-instructions" 
+                    rows="10" 
+                    data-i18n-placeholder="common_instructions_placeholder"
+                    style="width: 100%; font-family: monospace; font-size: 12px; line-height: 1.4;"></textarea>
+                <small class="help-text" data-i18n="common_instructions_help">These instructions will be automatically appended to all expert mode prompts. Changes take effect immediately.</small>
+                <div style="margin-top: 10px;">
+                    <button type="button" id="reset-common-prompt" class="secondary-button" data-i18n="reset_to_default">Reset to Default</button>
+                    <button type="button" id="apply-common-prompt" class="primary-button" data-i18n="apply_changes">Apply Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="save-button" class="primary-button" data-i18n="save_settings_btn">Save Settings</button>
+            <button id="test-button" class="secondary-button" data-i18n="test_connection_btn">Test Connection</button>
+        </div>
+
+        <div id="status-message" class="status-message"></div>
+    </div>
+
+    <!-- 專家模式編輯模態窗 -->
+    <div id="expert-mode-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title" data-i18n="add_expert_mode_title">Add Expert Mode</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="expert-mode-id" data-i18n="mode_id">Mode ID</label>
+                    <input type="text" id="expert-mode-id" placeholder="例如: novel, technical, academic">
+                    <small class="help-text" data-i18n="mode_id_help">Unique identifier, can only contain English letters, numbers and underscores</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="expert-mode-name" data-i18n="mode_name">Mode Name</label>
+                    <input type="text" id="expert-mode-name" placeholder="例如: 小說模式">
+                </div>
+                
+                <div class="form-group">
+                    <label for="expert-mode-description" data-i18n="mode_description">Mode Description</label>
+                    <input type="text" id="expert-mode-description" placeholder="例如: 適合文學作品翻譯，保持文學性和情感表達">
+                </div>
+                
+                <div class="form-group">
+                    <label for="expert-mode-prompt" data-i18n="system_prompt">System Prompt</label>
+                    <textarea id="expert-mode-prompt" rows="8" placeholder="例如: You are a literary translator specializing in novels and creative works. Translate the following text to {targetLanguage}..."></textarea>
+                    <small class="help-text" data-i18n="system_prompt_help">Use {targetLanguage} as a placeholder for the target language</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" class="secondary-button" data-i18n="cancel">Cancel</button>
+                <button id="modal-save" class="primary-button" data-i18n="save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/options.js"></script>
+</body>
+</html>

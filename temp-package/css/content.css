@@ -14,24 +14,6 @@
   box-sizing: border-box;
 }
 
-/* INPUT 元素翻譯樣式 */
-.ai-translation-input-block {
-  display: inline-block !important;
-  margin-left: 8px;
-  padding: 4px 8px;
-  background-color: rgba(52, 73, 94, 0.1);
-  border: 1px solid #2c3e50;
-  color: #2c3e50;
-  font-style: italic;
-  font-size: 0.9em;
-  border-radius: 4px;
-  vertical-align: middle;
-  max-width: 200px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* 載入中的翻譯區塊 */
 .ai-translation-block.loading {
   color: #999;
@@ -121,8 +103,8 @@
 /* 浮動按鈕容器 */
 #ai-translation-floating-container {
   position: fixed;
-  right: 2%;
-  bottom: 15%;
+  right: 20px;
+  bottom: 80px;
   z-index: 999998;
 }
 
@@ -139,20 +121,6 @@
   align-items: center;
   position: relative;
   overflow: hidden;
-  user-select: none;
-}
-
-/* 拖曳狀態樣式 */
-#ai-translation-floating-button.dragging {
-  cursor: move !important;
-  transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-  z-index: 999999;
-  transition: none;
-}
-
-#ai-translation-floating-button.dragging * {
-  pointer-events: none;
 }
 
 /* 當有語言檢測結果時調整寬度 */

@@ -1,32 +1,25 @@
-// 浮動按鈕模組
-// 處理浮動按鈕UI、語言選單和按鈕交互
+// Floating Button Module
+// Handles floating button UI, language menu, and button interactions
 
-// 直接從全域範圍存取函數
+// Access functions from global scope directly
 
 let floatingButton = null;
 let isLanguageMenuOpen = false;
 
-// 拖拽狀態
-let isDragging = false;
-let dragOffset = { x: 0, y: 0 };
-let dragStartTime = 0;
-let hasDragged = false;
-let startPosition = { x: 0, y: 0 };
-
-// 建立浮動按鈕
+// Create floating button
 function createFloatingButton() {
   if (floatingButton) return;
   
-  // 建立浮動按鈕容器
+  // Create floating button container
   const buttonContainer = document.createElement('div');
   buttonContainer.id = 'ai-translation-floating-container';
   
-  // 合併按鈕
+  // Combined button
   floatingButton = document.createElement('div');
   floatingButton.id = 'ai-translation-floating-button';
   floatingButton.innerHTML = `
     <div class="floating-button-content">
-      <!-- 左側翻譯區域 -->
+      <!-- Left side translation area -->
       <div class="button-left-section" id="translate-section">
         <svg class="button-icon translate-icon" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-.61.08-1.21.21-1.78L8.99 15v1c0 1.1.9 2 2 2v1.93C7.06 19.43 4 16.07 4 12zm13.89 5.4c-.26-.81-1-1.4-1.89-1.4h-1v-3c0-.55-.45-1-1-1h-6v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41C17.92 5.77 20 8.65 20 12c0 2.08-.81 3.98-2.11 5.4z"/>
@@ -41,15 +34,15 @@ function createFloatingButton() {
         <div class="progress-text" style="display: none;"></div>
       </div>
       
-      <!-- 語言檢測顯示區域 -->
+      <!-- Language detection display area -->
       <div class="detected-language-section" id="detected-language-section" style="display: none;">
         <span class="detected-language-text" id="detected-language-text"></span>
       </div>
       
-      <!-- 分隔線 -->
+      <!-- Divider -->
       <div class="button-divider"></div>
       
-      <!-- 右側語言區域 -->
+      <!-- Right side language area -->
       <div class="button-right-section" id="language-section">
         <span class="language-text" id="current-language">中</span>
         <svg class="language-arrow" viewBox="0 0 24 24" width="10" height="10">
@@ -59,7 +52,7 @@ function createFloatingButton() {
     </div>
   `;
   
-  // 語言選擇選單
+  // Language selection menu
   const languageMenu = document.createElement('div');
   languageMenu.id = 'ai-translation-language-menu';
   languageMenu.innerHTML = `
@@ -75,12 +68,12 @@ function createFloatingButton() {
     </div>
   `;
   
-  // 組裝容器
+  // Assemble container
   buttonContainer.appendChild(languageMenu);
   buttonContainer.appendChild(floatingButton);
   document.body.appendChild(buttonContainer);
   
-  // 添加事件監聽器
+  // Add event listeners
   const translateSection = document.getElementById('translate-section');
   const languageSection = document.getElementById('language-section');
   
@@ -88,25 +81,16 @@ function createFloatingButton() {
   translateSection.addEventListener('contextmenu', handleTranslateSectionRightClick);
   languageSection.addEventListener('click', toggleLanguageMenu);
   
-  // 為整個按鈕添加拖拽事件監聽器
-  floatingButton.addEventListener('mousedown', handleMouseDown);
-  
-  // 語言選項點擊事件
+  // Language option click events
   languageMenu.addEventListener('click', (e) => {
     const option = e.target.closest('.language-option');
     if (option) {
       selectLanguage(option.dataset.lang, option.dataset.text);
     }
   });
-  
-  // 添加視窗大小調整監聽器以保持按鈕在視野內
-  window.addEventListener('resize', handleWindowResize);
-  
-  // 載入已儲存的位置
-  loadSavedPosition();
 }
 
-// 處理翻譯按鈕點擊
+// Handle translate button click
 async function handleTranslateClick(e) {
   e.preventDefault();
   e.stopPropagation();
@@ -120,7 +104,7 @@ async function handleTranslateClick(e) {
   }
 }
 
-// 處理翻譯區域右鍵點擊（切換自動翻譯）
+// Handle right-click on translate section (toggle auto-translate)
 async function handleTranslateSectionRightClick(e) {
   e.preventDefault();
   e.stopPropagation();
@@ -130,226 +114,7 @@ async function handleTranslateSectionRightClick(e) {
   }
 }
 
-// 拖拽功能
-function handleMouseDown(e) {
-  // 僅允許滑鼠左鍵拖拽
-  if (e.button !== 0) return;
-  
-  dragStartTime = Date.now();
-  isDragging = true;
-  hasDragged = false;
-  
-  const buttonContainer = document.getElementById('ai-translation-floating-container');
-  const rect = buttonContainer.getBoundingClientRect();
-  
-  dragOffset.x = e.clientX - rect.left;
-  dragOffset.y = e.clientY - rect.top;
-  
-  // 儲存開始位置以檢測實際移動
-  startPosition.x = e.clientX;
-  startPosition.y = e.clientY;
-  
-  // 添加全域滑鼠事件監聽器
-  document.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('mouseup', handleMouseUp);
-  
-  // 先不阻止預設行為 - 如果沒有拖拽則讓點擊事件冒泡
-}
-
-function handleMouseMove(e) {
-  if (!isDragging) return;
-  
-  // 檢查是否移動足夠距離以視為拖拽
-  const moveDistance = Math.sqrt(
-    Math.pow(e.clientX - startPosition.x, 2) + 
-    Math.pow(e.clientY - startPosition.y, 2)
-  );
-  
-  if (moveDistance > 5 && !hasDragged) {
-    // 開始實際拖拽
-    hasDragged = true;
-    floatingButton.classList.add('dragging');
-    document.body.style.userSelect = 'none';
-  }
-  
-  if (!hasDragged) return; // 在檢測到顯著移動之前不要移動
-  
-  const buttonContainer = document.getElementById('ai-translation-floating-container');
-  
-  // 計算新位置
-  let newX = e.clientX - dragOffset.x;
-  let newY = e.clientY - dragOffset.y;
-  
-  // 獲取視窗尺寸
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const buttonWidth = buttonContainer.offsetWidth;
-  const buttonHeight = buttonContainer.offsetHeight;
-  
-  // 限制在視窗邊界內（像素）
-  newX = Math.max(10, Math.min(newX, viewportWidth - buttonWidth - 10));
-  newY = Math.max(10, Math.min(newY, viewportHeight - buttonHeight - 10));
-  
-  // 轉換為百分比
-  const leftPercent = (newX / viewportWidth) * 100;
-  const bottomPercent = ((viewportHeight - newY - buttonHeight) / viewportHeight) * 100;
-  
-  // 使用百分比更新位置
-  buttonContainer.style.right = 'auto';
-  buttonContainer.style.top = 'auto';
-  buttonContainer.style.left = `${leftPercent}%`;
-  buttonContainer.style.bottom = `${bottomPercent}%`;
-  
-  e.preventDefault();
-}
-
-function handleMouseUp(e) {
-  if (!isDragging) return;
-  
-  isDragging = false;
-  
-  // 移除全域事件監聽器
-  document.removeEventListener('mousemove', handleMouseMove);
-  document.removeEventListener('mouseup', handleMouseUp);
-  
-  if (hasDragged) {
-    // 只有實際移動時才作為拖拽處理
-    floatingButton.classList.remove('dragging');
-    document.body.style.userSelect = '';
-    
-    // 將位置以百分比儲存到存儲
-    const buttonContainer = document.getElementById('ai-translation-floating-container');
-    const rect = buttonContainer.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // 計算百分比
-    const leftPercent = (rect.left / viewportWidth) * 100;
-    const bottomPercent = ((viewportHeight - rect.bottom) / viewportHeight) * 100;
-    
-    chrome.storage.local.set({
-      floatingButtonPosition: {
-        leftPercent: leftPercent,
-        bottomPercent: bottomPercent,
-        positioned: true,
-        usePercentage: true
-      }
-    });
-    
-    // 防止拖拽後觸發點擊事件
-    e.preventDefault();
-    e.stopPropagation();
-  }
-  
-  // 重置拖拽狀態
-  hasDragged = false;
-}
-
-// 載入已儲存的位置
-async function loadSavedPosition() {
-  try {
-    const result = await chrome.storage.local.get(['floatingButtonPosition']);
-    if (result.floatingButtonPosition && result.floatingButtonPosition.positioned) {
-      const buttonContainer = document.getElementById('ai-translation-floating-container');
-      const position = result.floatingButtonPosition;
-      
-      if (position.usePercentage && position.leftPercent !== undefined && position.bottomPercent !== undefined) {
-        // 使用百分比定位
-        let leftPercent = Math.max(1, Math.min(position.leftPercent, 90)); // Keep within 1% to 90%
-        let bottomPercent = Math.max(1, Math.min(position.bottomPercent, 90)); // Keep within 1% to 90%
-        
-        // 應用百分比位置
-        buttonContainer.style.right = 'auto';
-        buttonContainer.style.top = 'auto';
-        buttonContainer.style.left = `${leftPercent}%`;
-        buttonContainer.style.bottom = `${bottomPercent}%`;
-        
-        window.TransCraftDebug.debugLog(`Loaded percentage position: left=${leftPercent}%, bottom=${bottomPercent}%`);
-      } else {
-        // 回退到舊版像素定位
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const buttonWidth = 100; // 估計按鈕寬度
-        const buttonHeight = 60; // 估計按鈕高度
-        
-        // 限制在目前視窗內
-        let x = Math.max(10, Math.min(position.x, viewportWidth - buttonWidth - 10));
-        let y = Math.max(10, Math.min(position.y, viewportHeight - buttonHeight - 10));
-        
-        // 轉換為百分比並儲存
-        const leftPercent = (x / viewportWidth) * 100;
-        const bottomPercent = ((viewportHeight - y - buttonHeight) / viewportHeight) * 100;
-        
-        // 應用百分比位置
-        buttonContainer.style.right = 'auto';
-        buttonContainer.style.top = 'auto';
-        buttonContainer.style.left = `${leftPercent}%`;
-        buttonContainer.style.bottom = `${bottomPercent}%`;
-        
-        // 更新存儲以使用百分比
-        chrome.storage.local.set({
-          floatingButtonPosition: {
-            leftPercent: leftPercent,
-            bottomPercent: bottomPercent,
-            positioned: true,
-            usePercentage: true
-          }
-        });
-        
-        window.TransCraftDebug.debugLog(`Converted legacy position to percentages: left=${leftPercent}%, bottom=${bottomPercent}%`);
-      }
-    }
-  } catch (error) {
-    window.TransCraftDebug.debugLog('Failed to load floating button position:', error);
-  }
-}
-
-// 處理視窗大小調整以保持按鈕在視野內
-function handleWindowResize() {
-  // 使用百分比定位，按鈕應自動保持比例
-  // 只需檢查按鈕是否超出極限邊界
-  const buttonContainer = document.getElementById('ai-translation-floating-container');
-  if (!buttonContainer) return;
-  
-  // 獲取目前計算樣式
-  const computedStyle = window.getComputedStyle(buttonContainer);
-  const currentLeft = computedStyle.left;
-  const currentBottom = computedStyle.bottom;
-  
-  // 如果已經使用百分比，無需操作
-  // CSS百分比定位會自動處理大小調整
-  if (currentLeft.includes('%') && currentBottom.includes('%')) {
-    window.TransCraftDebug.debugLog('Button using percentage positioning - resize handled automatically');
-    return;
-  }
-  
-  // 如果仍然有像素定位，轉換為百分比
-  const rect = buttonContainer.getBoundingClientRect();
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  
-  const leftPercent = Math.max(1, Math.min((rect.left / viewportWidth) * 100, 90));
-  const bottomPercent = Math.max(1, Math.min(((viewportHeight - rect.bottom) / viewportHeight) * 100, 90));
-  
-  buttonContainer.style.right = 'auto';
-  buttonContainer.style.top = 'auto';
-  buttonContainer.style.left = `${leftPercent}%`;
-  buttonContainer.style.bottom = `${bottomPercent}%`;
-  
-  // 儲存百分比位置
-  chrome.storage.local.set({
-    floatingButtonPosition: {
-      leftPercent: leftPercent,
-      bottomPercent: bottomPercent,
-      positioned: true,
-      usePercentage: true
-    }
-  });
-  
-  window.TransCraftDebug.debugLog(`Converted to percentage positioning on resize: left=${leftPercent}%, bottom=${bottomPercent}%`);
-}
-
-// 更新浮動按鈕狀態
+// Update floating button status
 function updateFloatingButton(status) {
   if (!floatingButton) return;
   
@@ -358,13 +123,13 @@ function updateFloatingButton(status) {
   const progressText = floatingButton.querySelector('.progress-text');
   const translateSection = floatingButton.querySelector('.button-left-section');
   
-  // 重置所有圖標和狀態
+  // Reset all icons and states
   translateIcon.style.display = 'none';
   loadingIcon.style.display = 'none';
   loadingIcon.classList.remove('show');
   progressText.style.display = 'none';
   
-  // 移除所有狀態類別
+  // Remove all state classes
   floatingButton.classList.remove('translating');
   translateSection.classList.remove('translating');
   
@@ -390,7 +155,7 @@ function updateFloatingButton(status) {
   }
 }
 
-// 更新浮動按鈕進度
+// Update floating button progress
 function updateFloatingButtonProgress(percentage) {
   const progressText = floatingButton?.querySelector('.progress-text');
   const progressRingFill = floatingButton?.querySelector('.progress-ring-fill');
@@ -398,7 +163,7 @@ function updateFloatingButtonProgress(percentage) {
   if (progressText && progressRingFill) {
     progressText.textContent = `${Math.round(percentage)}%`;
     
-    // 更新進度環
+    // Update progress ring
     const radius = 10;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percentage / 100 * circumference);
@@ -406,7 +171,7 @@ function updateFloatingButtonProgress(percentage) {
   }
 }
 
-// 切換語言選單
+// Toggle language menu
 function toggleLanguageMenu(e) {
   e.preventDefault();
   e.stopPropagation();
@@ -418,7 +183,7 @@ function toggleLanguageMenu(e) {
   }
 }
 
-// 打開語言選單
+// Open language menu
 function openLanguageMenu() {
   const menu = document.getElementById('ai-translation-language-menu');
   if (menu) {
@@ -428,14 +193,14 @@ function openLanguageMenu() {
     }, 10);
     isLanguageMenuOpen = true;
     
-    // 添加點擊外部監聽器
+    // Add click outside listener
     setTimeout(() => {
       document.addEventListener('click', closeLanguageMenuOnClickOutside);
     }, 100);
   }
 }
 
-// 關閉語言選單
+// Close language menu
 function closeLanguageMenu() {
   const menu = document.getElementById('ai-translation-language-menu');
   if (menu) {
@@ -448,7 +213,7 @@ function closeLanguageMenu() {
   }
 }
 
-// 點擊外部時關閉選單
+// Close menu on click outside
 function closeLanguageMenuOnClickOutside(e) {
   const menu = document.getElementById('ai-translation-language-menu');
   const languageSection = document.getElementById('language-section');
@@ -458,21 +223,21 @@ function closeLanguageMenuOnClickOutside(e) {
   }
 }
 
-// 選擇語言
+// Select language
 async function selectLanguage(langCode, langText) {
-  // 更新狀態
+  // Update state
   window.TransCraftState.targetLanguage = langCode;
   updateLanguageButtonText();
   closeLanguageMenu();
   
-  // 儲存到存儲
+  // Save to storage
   await chrome.storage.sync.set({ targetLanguage: langCode });
   window.TransCraftDebug.debugLog('Language changed to:', langCode);
   
-  // 顯示回饋
+  // Show feedback
   window.TransCraftDebug.showFloatingMessage(`已切換到${langText}`);
   
-  // 如果已翻譯則重新翻譯
+  // Re-translate if already translated
   if (window.TransCraftState.isTranslated) {
     window.TransCraftTranslationAPI.restoreOriginalText();
     setTimeout(() => {
@@ -483,7 +248,7 @@ async function selectLanguage(langCode, langText) {
   }
 }
 
-// 載入目標語言設定
+// Load target language setting
 async function loadTargetLanguage() {
   const settings = await chrome.storage.sync.get(['targetLanguage']);
   if (settings.targetLanguage) {
@@ -492,11 +257,11 @@ async function loadTargetLanguage() {
   
   window.TransCraftDebug.debugLog('Target language loaded:', window.TransCraftState.targetLanguage);
   
-  // 更新按鈕顯示
+  // Update button display
   updateLanguageButtonText();
 }
 
-// 更新語言按鈕文字
+// Update language button text
 function updateLanguageButtonText() {
   const languageMap = {
     'zh-TW': '中',
@@ -515,7 +280,7 @@ function updateLanguageButtonText() {
   }
 }
 
-// 顯示檢測到的語言
+// Display detected language
 function displayDetectedLanguage(detectedLang) {
   const detectedLangSection = document.getElementById('detected-language-section');
   const detectedLangText = document.getElementById('detected-language-text');
@@ -544,7 +309,7 @@ function displayDetectedLanguage(detectedLang) {
   }
 }
 
-// 更新自動翻譯按鈕狀態
+// Update auto-translate button state
 function updateAutoTranslateButton() {
   const translateSection = document.getElementById('translate-section');
   
@@ -564,9 +329,9 @@ function updateAutoTranslateButton() {
   }
 }
 
-// 初始化浮動按鈕
+// Initialize floating button
 function initializeFloatingButton() {
-  // 等待頁面完全載入
+  // Wait for page to fully load
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', createFloatingButton);
   } else {
@@ -574,16 +339,11 @@ function initializeFloatingButton() {
   }
 }
 
-// 將函數匯出到全域範圍
+// Export functions to global scope
 window.TransCraftFloatingButton = {
   createFloatingButton,
   handleTranslateClick,
   handleTranslateSectionRightClick,
-  handleMouseDown,
-  handleMouseMove,
-  handleMouseUp,
-  loadSavedPosition,
-  handleWindowResize,
   updateFloatingButton,
   updateFloatingButtonProgress,
   toggleLanguageMenu,

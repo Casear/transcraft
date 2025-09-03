@@ -1,11 +1,11 @@
-// 模態窗和UI組件模組
-// 處理錯誤模態窗、相同語言模態窗和UI回饋
+// Modal and UI Components Module
+// Handles error modals, same language modals, and UI feedback
 
-// 直接從全域範圍存取函數
+// Access functions from global scope directly
 
-// 顯示相同語言模態窗並提供強制翻譯選項
+// Show same language modal with force translation option
 function showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage, onForceTranslate) {
-  // 移除現有模態窗
+  // Remove existing modal
   const existingModal = document.getElementById('ai-translation-same-language-modal');
   if (existingModal) {
     existingModal.remove();
@@ -37,12 +37,12 @@ function showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage,
 
   document.body.appendChild(modal);
 
-  // 添加動畫類別
+  // Add animation class
   setTimeout(() => {
     modal.classList.add('show');
   }, 10);
 
-  // 關閉按鈕功能
+  // Close button functionality
   const closeBtn = modal.querySelector('.same-language-close-btn');
   const overlay = modal.querySelector('.same-language-modal-overlay');
   const forceBtn = modal.querySelector('.same-language-force-btn');
@@ -61,7 +61,7 @@ function showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage,
     }
   });
 
-  // 強制翻譯按鈕
+  // Force translation button
   forceBtn.addEventListener('click', () => {
     closeModal();
     if (onForceTranslate) {
@@ -69,13 +69,13 @@ function showSameLanguageModal(sourceLangName, targetLangName, detectedLanguage,
     }
   });
 
-  // 10秒後自動關閉
+  // Auto-close after 10 seconds
   setTimeout(closeModal, 10000);
 }
 
-// 顯示錯誤模態窗
+// Show error modal
 function showErrorModal(title, message, autoCloseMs = 5000) {
-  // 移除現有錯誤模態窗
+  // Remove existing error modal
   const existingModal = document.getElementById('ai-translation-error-modal');
   if (existingModal) {
     existingModal.remove();
@@ -102,12 +102,12 @@ function showErrorModal(title, message, autoCloseMs = 5000) {
   
   document.body.appendChild(modal);
   
-  // 添加動畫類別
+  // Add animation class
   setTimeout(() => {
     modal.classList.add('show');
   }, 10);
   
-  // 關閉按鈕功能
+  // Close button functionality
   const closeBtn = modal.querySelector('.error-modal-close-btn');
   const overlay = modal.querySelector('.error-modal-overlay');
   
@@ -125,13 +125,13 @@ function showErrorModal(title, message, autoCloseMs = 5000) {
     }
   });
   
-  // 自動關閉
+  // Auto-close
   setTimeout(closeModal, autoCloseMs);
 }
 
-// 顯示翻譯錯誤摘要
+// Show translation error summary
 function showTranslationErrorSummary(errors, successCount, totalCount) {
-  // 按類型分組錯誤
+  // Group errors by type
   const errorGroups = {};
   errors.forEach(error => {
     if (!errorGroups[error.type]) {
@@ -140,7 +140,7 @@ function showTranslationErrorSummary(errors, successCount, totalCount) {
     errorGroups[error.type].push(error.element);
   });
 
-  // 構建摘要行
+  // Build summary lines
   const summaryLines = [`成功翻譯 ${successCount}/${totalCount} 個元素`];
   
   Object.entries(errorGroups).forEach(([type, elements]) => {
@@ -164,7 +164,7 @@ function showTranslationErrorSummary(errors, successCount, totalCount) {
     summaryLines.push(`<br>• ${typeDescription}: ${elements.length} 個元素`);
   });
 
-  // 顯示詳細錯誤摘要
+  // Show detailed error summary
   if (errorGroups['EXTENSION_CONTEXT_INVALID']) {
     showErrorModal('擴充功能需要更新', '請重新整理頁面後再試翻譯。');
   } else if (errorGroups['QUOTA_EXCEEDED']) {
@@ -180,7 +180,7 @@ function showTranslationErrorSummary(errors, successCount, totalCount) {
   }
 }
 
-// 將函數匯出到全域範圍
+// Export functions to global scope
 window.TransCraftModal = {
   showSameLanguageModal,
   showErrorModal,

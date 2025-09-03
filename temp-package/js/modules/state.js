@@ -1,31 +1,31 @@
-// 全域狀態管理模組
-// 擴充功能的集中式狀態管理
+// Global State Management Module
+// Centralized state management for the extension
 
-// 初始化全域狀態
+// Initialize global state
 window.TransCraftState = {
-  // 翻譯狀態
+  // Translation state
   isTranslated: false,
   isTranslating: false,
   autoTranslateCompleted: false,
   
-  // 設定
+  // Settings
   targetLanguage: 'zh-TW',
   expertMode: 'general',
   debugMode: false,
   autoTranslateEnabled: false,
   
-  // UI 狀態
+  // UI state
   isLanguageMenuOpen: false,
   i18nReady: false,
   
-  // 數據存儲
-  translationElements: new Map(), // 翻譯區塊到其父元素的映射
+  // Data storage
+  translationElements: new Map(), // Map of translation divs to their parent elements
   
-  // 域名信息
+  // Domain info
   currentDomain: window.location.hostname.replace('www.', '')
 };
 
-// 狀態管理函數
+// State management functions
 window.TransCraftState.setState = function(newState) {
   Object.assign(this, newState);
 };
@@ -52,7 +52,7 @@ window.TransCraftState.reset = function() {
   this.translationElements.clear();
 };
 
-// 匯出狀態物件
+// Export state object
 window.TransCraftState.init = function() {
   console.log('TransCraft state initialized for domain:', this.currentDomain);
 };

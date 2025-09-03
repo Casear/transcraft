@@ -1,0 +1,151 @@
+body {
+    margin: 0;
+    padding: 0;
+    width: 320px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.popup-container {
+    padding: 20px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: #e0e0e0;
+}
+
+h1 {
+    margin: 0 0 20px 0;
+    font-size: 24px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.language-selector, .expert-mode-selector {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.language-selector label, .expert-mode-selector label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#popup-target-language, #popup-expert-mode {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #555;
+    border-radius: 5px;
+    font-size: 14px;
+    background: #3a3a3a;
+    color: #e0e0e0;
+}
+
+#popup-target-language:focus, #popup-expert-mode:focus {
+    outline: none;
+    border-color: #2c3e50;
+    box-shadow: 0 0 0 2px rgba(44, 62, 80, 0.3);
+}
+
+.api-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0;
+    background: none;
+    border-radius: 0;
+    margin: 0;
+}
+
+.status-icon {
+    font-size: 10px;
+    margin-right: 5px;
+}
+
+.status-icon.ready {
+    color: #4caf50;
+}
+
+.status-icon.error {
+    color: #f44336;
+}
+
+.status-icon.checking {
+    color: #ffc107;
+}
+
+#status-text {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.translate-button {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 8px;
+    background: #e0e0e0;
+    color: #2c3e50;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 15px;
+}
+
+.translate-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.translate-button:active {
+    transform: translateY(0);
+}
+
+.translate-button.translating {
+    background: rgba(224, 224, 224, 0.7);
+    cursor: not-allowed;
+}
+
+.translate-button.translated {
+    background: #2c3e50;
+    color: #e0e0e0;
+}
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.settings-link {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 5px 10px;
+}
+
+.settings-link:hover {
+    color: white;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.status-icon.checking {
+    animation: pulse 1.5s infinite;
+}

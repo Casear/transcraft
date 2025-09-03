@@ -1,29 +1,29 @@
-// 自動翻譯模組
-// 處理自動翻譯功能和基於域名的設定
+// Auto-translate Module
+// Handles automatic translation functionality and domain-based settings
 
-// 直接從全域範圍存取函數
+// Access functions from global scope directly
 
 let currentDomain = window.location.hostname.replace('www.', '');
 let settingsLoaded = false;
 
-// 載入自動翻譯設定
+// Load auto-translate settings
 async function loadAutoTranslateSettings() {
   try {
     await window.TransCraftDebug.initContentI18n();
     
     const result = await chrome.storage.sync.get(['debugMode', 'autoTranslateDomains']);
     
-    // 設定調試模式
+    // Set debug mode
     window.TransCraftDebug.setDebugMode(result.debugMode || false);
     
-    // 設定目前域名的自動翻譯狀態
+    // Set auto-translate state for current domain
     const autoTranslateDomains = result.autoTranslateDomains || {};
     window.TransCraftState.autoTranslateEnabled = autoTranslateDomains[currentDomain] || false;
     settingsLoaded = true;
     
     window.TransCraftDebug.debugLog('Auto-translate settings loaded for', currentDomain, ':', window.TransCraftState.autoTranslateEnabled);
     
-    // 設定載入時更新UI - 多次重試以確保按鈕存在
+    // Update UI when settings are loaded - retry multiple times to ensure button exists
     let retryCount = 0;
     const maxRetries = 10;
     const updateButtonWithRetry = () => {
@@ -41,7 +41,7 @@ async function loadAutoTranslateSettings() {
     };
     updateButtonWithRetry();
     
-    // 設定載入後的初始自動翻譯檢查（僅在啟用時）
+    // Initial auto-translate check after settings are loaded (only if enabled)
     if (window.TransCraftState.autoTranslateEnabled) {
       window.TransCraftDebug.debugLog('Settings loaded and auto-translate enabled, performing initial check');
       checkAndAutoTranslate();
@@ -52,9 +52,9 @@ async function loadAutoTranslateSettings() {
   }
 }
 
-// 從存儲初始化設定 - 這將從編排器被呼叫
+// Initialize settings from storage - this will be called from orchestrator
 
-// 儲存自動翻譯狀態
+// Save auto-translate state
 async function saveAutoTranslateState(enabled) {
   const result = await chrome.storage.sync.get(['autoTranslateDomains']);
   const autoTranslateDomains = result.autoTranslateDomains || {};
@@ -69,14 +69,14 @@ async function saveAutoTranslateState(enabled) {
   window.TransCraftDebug.debugLog('Auto-translate state saved for', currentDomain, ':', enabled);
 }
 
-// 切換自動翻譯
+// Toggle auto-translate
 async function toggleAutoTranslate() {
   window.TransCraftState.autoTranslateEnabled = !window.TransCraftState.autoTranslateEnabled;
   await saveAutoTranslateState(window.TransCraftState.autoTranslateEnabled);
   
   window.TransCraftDebug.debugLog('Auto-translate toggled for', currentDomain, ':', window.TransCraftState.autoTranslateEnabled);
   
-  // 使用重試機制更新按鈕狀態
+  // Update button state with retry mechanism
   let retryCount = 0;
   const maxRetries = 5;
   const updateButtonWithRetry = () => {
@@ -91,7 +91,7 @@ async function toggleAutoTranslate() {
   };
   updateButtonWithRetry();
   
-  // 如果啟用，立即檢查自動翻譯
+  // If enabled, check for auto-translate immediately
   if (window.TransCraftState.autoTranslateEnabled) {
     setTimeout(() => {
       checkAndAutoTranslate();
@@ -99,7 +99,7 @@ async function toggleAutoTranslate() {
   }
 }
 
-// 檢查和自動翻譯
+// Check and auto-translate
 async function checkAndAutoTranslate() {
   if (!window.TransCraftState.autoTranslateEnabled || 
       window.TransCraftState.isTranslating || 
@@ -116,13 +116,13 @@ async function checkAndAutoTranslate() {
   
   window.TransCraftDebug.debugLog('Auto-translate is enabled for', currentDomain, ', checking if page should be translated');
   
-  // 等待頁面載入
+  // Wait for page to load
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // 檢查API是否已配置
+  // Check if API is configured
   const apiConfig = await chrome.storage.sync.get(['selectedApi', 'apiKeys', 'enableLanguageDetection']);
   
-  // 從狀態添加目前目標語言
+  // Add current target language from state
   apiConfig.targetLanguage = window.TransCraftState.targetLanguage;
   if (!apiConfig.selectedApi || !apiConfig.apiKeys?.[apiConfig.selectedApi]) {
     window.TransCraftDebug.debugLog('⚠️ Auto-translate skipped: No API configuration');
@@ -172,13 +172,13 @@ async function checkAndAutoTranslate() {
   
   window.TransCraftDebug.debugLog('Starting auto-translation for', window.TransCraftTranslationAPI.getTranslatableElements().length, 'elements');
   
-  // 使用主翻譯模組開始翻譯
+  // Start translation using the main translation module
   if (window.TransCraftTranslation && window.TransCraftTranslation.translatePage) {
     window.TransCraftTranslation.translatePage();
   }
 }
 
-// 使用多次重試嘗試初始化自動翻譯
+// Initialize auto-translate with multiple retry attempts
 async function initializeAutoTranslate() {
   const maxInitRetries = 10;
   let initRetryCount = 0;
@@ -198,11 +198,11 @@ async function initializeAutoTranslate() {
     }
   };
   
-  // 開始初始化
+  // Start initialization
   initWithRetry();
 }
 
-// 監聽頁面URL變化（用於spa）
+// Listen for page URL changes (for SPAs)
 function setupPageChangeListener() {
   let lastUrl = location.href;
   
@@ -211,7 +211,7 @@ function setupPageChangeListener() {
       lastUrl = location.href;
       window.TransCraftDebug.debugLog('Page URL changed, reinitializing auto-translate');
       
-      // 為新頁面重置狀態
+      // Reset state for new page
       window.TransCraftState.isTranslated = false;
       window.TransCraftState.autoTranslateCompleted = false;
       
@@ -219,20 +219,20 @@ function setupPageChangeListener() {
         if (window.TransCraftState.autoTranslateEnabled) {
           checkAndAutoTranslate();
         }
-      }, 2000); // 等待更長時間讓SPA內容載入
+      }, 2000); // Wait longer for SPA content to load
     }
   };
   
-  // 定期檢查URL變化
+  // Check for URL changes periodically
   setInterval(checkForPageChange, 1000);
   
-  // 也監聽popstate事件（瀏覽器後退/前進）
+  // Also listen for popstate events (browser back/forward)
   window.addEventListener('popstate', () => {
     setTimeout(checkForPageChange, 100);
   });
 }
 
-// 將函數匯出到全域範圍
+// Export functions to global scope
 window.TransCraftAutoTranslate = {
   loadAutoTranslateSettings,
   saveAutoTranslateState,

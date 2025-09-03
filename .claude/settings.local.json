@@ -15,7 +15,12 @@
       "Bash(mv:*)",
       "Bash(rm:*)",
       "Bash(cp:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(npm run build:*)",
+      "Bash(unzip:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(zip:*)"
     ],
     "deny": []
   }

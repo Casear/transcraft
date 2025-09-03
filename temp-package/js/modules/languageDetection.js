@@ -1,13 +1,13 @@
-// 語言檢測模組
-// 使用多種方法處理全面的語言檢測
+// Language Detection Module
+// Handles comprehensive language detection using multiple methods
 
-// 直接從全域範圍存取函數
+// Access functions from global scope directly
 
 function detectLanguageByCharacteristics(text) {
   window.TransCraftDebug.debugLog('🔍 Starting character-based language detection');
   window.TransCraftDebug.debugLog('📝 Sample text (first 200 chars):', text.substring(0, 200) + (text.length > 200 ? '...' : ''));
   
-  // 清理文本以進行更好的檢測
+  // Clean text for better detection
   const cleanText = text.replace(/[^\p{L}\p{N}\s]/gu, '').trim();
   window.TransCraftDebug.debugLog('🧹 Cleaned text length:', cleanText.length, 'characters');
   
@@ -16,7 +16,7 @@ function detectLanguageByCharacteristics(text) {
     return null;
   }
   
-  // 基於字符的檢測
+  // Character-based detection
   const chineseRegex = /[\u4e00-\u9fff]/g;
   const japaneseHiraganaKatakana = /[\u3040-\u309f\u30a0-\u30ff]/g;
   const koreanRegex = /[\uac00-\ud7af]/g;
@@ -43,15 +43,15 @@ function detectLanguageByCharacteristics(text) {
     russian: `${russianCount} (${(russianCount/totalChars*100).toFixed(1)}%)`
   });
   
-  // 如果中文字符佔重要比例
+  // If significant portion is Chinese characters
   if (chineseCount / totalChars > 0.2) { // Lower threshold for mixed content
     window.TransCraftDebug.debugLog('🈶 Chinese detected (>20%), analyzing Traditional vs Simplified...');
     
-    // 增強繁體/簡體中文檢測
+    // Enhanced Traditional/Simplified Chinese detection
     const traditionalIndicators = /[繁體複雜學習開關們這樣時間問題說話語言國家經濟發展變化]/g;
     const simplifiedIndicators = /[简体复杂学习开关们这样时间问题说话语言国家经济发展变化]/g;
     
-    // 檢查僅繁體和僅簡體字符
+    // Check for traditional-only and simplified-only characters
     const traditionalOnlyChars = /[繁體複雜學習開關]/g;
     const simplifiedOnlyChars = /[简体复杂学习开关]/g;
     
@@ -72,18 +72,18 @@ function detectLanguageByCharacteristics(text) {
       simplifiedExamples: simplifiedMatch.slice(0, 3)
     });
     
-    // 簡體強指示符
+    // Strong indicators for simplified
     if (simplifiedOnlyCount > 0 || (simplifiedCount > traditionalCount * 1.5)) {
       window.TransCraftDebug.debugLog('✅ Detected as zh-CN (Simplified Chinese) - Strong simplified indicators');
       return 'zh-CN';
     }
-    // 繁體強指示符
+    // Strong indicators for traditional
     else if (traditionalOnlyCount > 0 || (traditionalCount > simplifiedCount * 1.5)) {
       window.TransCraftDebug.debugLog('✅ Detected as zh-TW (Traditional Chinese) - Strong traditional indicators');
       return 'zh-TW';
     }
     
-    // 檢查HTML語言屬性或URL模式作為額外上下文
+    // Check HTML lang attribute or URL patterns as additional context
     const htmlLang = document.documentElement.lang?.toLowerCase() || '';
     const hostname = window.location.hostname.toLowerCase();
     const isTraditionalContext = htmlLang.includes('tw') || htmlLang.includes('hk') || 
@@ -106,55 +106,55 @@ function detectLanguageByCharacteristics(text) {
       return 'zh-TW';
     }
     
-    // 基於常見模式的預設值
+    // Default based on common patterns
     const result = traditionalCount >= simplifiedCount ? 'zh-TW' : 'zh-CN';
     window.TransCraftDebug.debugLog(`✅ Detected as ${result} - Based on character frequency (traditional:${traditionalCount} vs simplified:${simplifiedCount})`);
     return result;
   }
   
-  // 日文檢測 - 優先考慮假名存在而非百分比
+  // Japanese detection - prioritize kana presence over percentage
   if (japaneseCount > 0) {
     window.TransCraftDebug.debugLog('🈷️ Japanese kana characters found, checking threshold...');
-    // 如果有日文假名字符，則可能是日文
-    // 即使百分比較低也可能因為漢字與中文重疊
+    // If there are Japanese kana characters, it's likely Japanese
+    // even with a lower percentage due to kanji overlap with Chinese
     if (japaneseCount / totalChars > 0.05 || japaneseCount > 10) {
       window.TransCraftDebug.debugLog(`✅ Detected as ja (Japanese) - Kana chars: ${japaneseCount} (${(japaneseCount/totalChars*100).toFixed(1)}%) or >10 absolute count`);
       return 'ja';
     }
   }
   
-  // 韓文檢測
+  // Korean detection
   if (koreanCount / totalChars > 0.3) {
     window.TransCraftDebug.debugLog(`✅ Detected as ko (Korean) - ${(koreanCount/totalChars*100).toFixed(1)}% Korean characters`);
     return 'ko';
   }
   
-  // 泰文檢測
+  // Thai detection
   if (thaiCount / totalChars > 0.3) {
     window.TransCraftDebug.debugLog(`✅ Detected as th (Thai) - ${(thaiCount/totalChars*100).toFixed(1)}% Thai characters`);
     return 'th';
   }
   
-  // 阿拉伯文檢測
+  // Arabic detection
   if (arabicCount / totalChars > 0.3) {
     window.TransCraftDebug.debugLog(`✅ Detected as ar (Arabic) - ${(arabicCount/totalChars*100).toFixed(1)}% Arabic characters`);
     return 'ar';
   }
   
-  // 俄文檢測
+  // Russian detection
   if (russianCount / totalChars > 0.3) {
     window.TransCraftDebug.debugLog(`✅ Detected as ru (Russian) - ${(russianCount/totalChars*100).toFixed(1)}% Cyrillic characters`);
     return 'ru';
   }
   
-  // 檢查基於拉丁字母的語言（在亞洲語言檢測之後）
+  // Check for Latin-based languages (after Asian language detection)
   const latinRegex = /[a-zA-Z]/g;
   const latinCount = (cleanText.match(latinRegex) || []).length;
   
   if (latinCount / totalChars > 0.7) {
     window.TransCraftDebug.debugLog(`🔤 Latin alphabet detected (${(latinCount/totalChars*100).toFixed(1)}%), analyzing patterns...`);
     
-    // 基於常用字詞的增強語言檢測
+    // Enhanced language detection based on common words
     const wordPatterns = {
       en: /\b(the|is|are|was|were|have|has|been|being|and|or|but|in|on|at|to|for|of|with|from|about|that|this|these|those|what|where|when|why|how)\b/gi,
       es: /\b(el|la|los|las|de|del|y|que|es|en|un|una|por|para|con|sin|sobre|pero|más|muy|todo|todos|esta|este|estos|estas)\b/gi,
@@ -171,7 +171,7 @@ function detectLanguageByCharacteristics(text) {
     
     window.TransCraftDebug.debugLog('🗣️ Language word pattern matches:', matches);
     
-    // 尋找匹配最多的語言
+    // Find the language with most matches
     let detectedLang = 'en';
     let maxMatches = matches.en || 0;
     
@@ -182,13 +182,13 @@ function detectLanguageByCharacteristics(text) {
       }
     }
     
-    // 需要至少3個字詞匹配以獲得信心
+    // Require at least 3 word matches for confidence
     if (maxMatches >= 3) {
       window.TransCraftDebug.debugLog(`✅ Detected as ${detectedLang} - Based on ${maxMatches} common word matches`);
       return detectedLang;
     }
     
-    // 對於模式不足的拉丁文本預設為英文
+    // Default to English for Latin text with insufficient patterns
     window.TransCraftDebug.debugLog('✅ Detected as en (English) - Default for Latin text with insufficient specific patterns');
     return 'en';
   }
@@ -201,7 +201,7 @@ async function detectLanguageWithBrowser(text) {
   window.TransCraftDebug.debugLog('🌐 Attempting browser-based language detection...');
   window.TransCraftDebug.debugLog('📝 Browser detection sample (first 100 chars):', text.substring(0, 100) + (text.length > 100 ? '...' : ''));
   
-  // 如果可用，嘗試瀏覽器內建的語言檢測
+  // Try browser's built-in language detection if available
   if ('detectLanguage' in chrome.i18n) {
     try {
       const detectedLang = await chrome.i18n.detectLanguage(text);
@@ -213,7 +213,7 @@ async function detectLanguageWithBrowser(text) {
         ));
         
         const mostLikely = detectedLang.languages[0];
-        if (mostLikely.percentage > 70) { // 只信任高信心度結果
+        if (mostLikely.percentage > 70) { // Only trust high confidence results
           window.TransCraftDebug.debugLog(`✅ Browser detected ${mostLikely.language} with ${mostLikely.percentage}% confidence (>70% threshold)`);
           return mostLikely.language;
         } else {
@@ -237,10 +237,10 @@ async function detectLanguage(text) {
   window.TransCraftDebug.debugLog('🚀 Starting comprehensive language detection process');
   window.TransCraftDebug.debugLog('📏 Input text length:', text.length, 'characters');
   
-  // 首先嘗試瀏覽器檢測
+  // First try browser detection
   const browserDetection = await detectLanguageWithBrowser(text);
   if (browserDetection) {
-    // 如果瀏覽器檢測到通用的'zh'，使用字符分析來決定變體
+    // If browser detected generic 'zh', use character analysis to determine variant
     if (browserDetection === 'zh') {
       window.TransCraftDebug.debugLog('🔍 Browser detected generic Chinese, analyzing variant...');
       const characterDetection = detectLanguageByCharacteristics(text);
@@ -253,7 +253,7 @@ async function detectLanguage(text) {
     return browserDetection;
   }
   
-  // 回退到基於字符的檢測
+  // Fallback to character-based detection
   const characterDetection = detectLanguageByCharacteristics(text);
   if (characterDetection) {
     window.TransCraftDebug.debugLog(`🎯 Final result: ${characterDetection} (Character-based detection)`);
@@ -267,15 +267,15 @@ async function detectLanguage(text) {
 function shouldTranslate(sourceLanguage, targetLanguage) {
   if (!sourceLanguage || !targetLanguage) {
     window.TransCraftDebug.debugLog('Language detection uncertain, proceeding with translation');
-    return true; // 如果不確定則繼續進行
+    return true; // Proceed if uncertain
   }
   
-  // 標準化語言代碼並增強中文處理
+  // Normalize language codes with enhanced Chinese handling
   const normalizeLanguage = (lang) => {
     if (lang.startsWith('zh')) {
-      return lang; // 保持中文變體分離（zh-TW ≠ zh-CN）
+      return lang; // Keep Chinese variants separate (zh-TW ≠ zh-CN)
     }
-    return lang.split('-')[0]; // 移除其他語言的地區代碼（en-US → en）
+    return lang.split('-')[0]; // Remove region codes for other languages (en-US → en)
   };
   
   const normalizedSource = normalizeLanguage(sourceLanguage);
@@ -292,7 +292,7 @@ function shouldTranslate(sourceLanguage, targetLanguage) {
   return shouldTranslateResult;
 }
 
-// 將函數匯出到全域範圍
+// Export functions to global scope
 window.TransCraftLanguageDetection = {
   detectLanguageByCharacteristics,
   detectLanguageWithBrowser,
